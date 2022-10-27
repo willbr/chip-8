@@ -5,7 +5,8 @@ int
 main(int argc, char **argv)
 {
     init();
-    load("../roms/IBM Logo.ch8");
+    load("./roms/IBM Logo.ch8");
+    cycle();
     cycle();
     puts("goodbye");
     return 0;
