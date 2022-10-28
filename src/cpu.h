@@ -122,10 +122,9 @@ cycle(void) {
     u16 op;
     u8 vx, vy, n, nn;
     u16 nnn;
-    u16 pc_offset = 2;
-    int jumped = false;
 
     op = peek16(pc);
+    pc += 2;
 
     printf("op: 0x%04x\n", op);
 
@@ -149,7 +148,6 @@ cycle(void) {
 
     case 0x1000:
         pc = op & 0xfff;
-        jumped = true;
         printf("jp $%0rx\n", pc);
         break;
 
@@ -225,8 +223,6 @@ cycle(void) {
         break;
     }
 
-    if (!jumped)
-        pc += pc_offset;
 }
 
 
