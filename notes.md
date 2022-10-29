@@ -3,6 +3,8 @@ notes from:
 
 # Reference
 
+tinyc.games tcc + SDL
+
 https://en.wikipedia.org/wiki/CHIP-8
 https://wiki.xxiivv.com/site/chip8.html
 http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
