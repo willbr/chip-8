@@ -1,5 +1,5 @@
 #include <stdio.h>
-//#include "cpu.h"
+#include "cpu.h"
 #include <stdint.h>
 #define _STDINT_H_
 
@@ -50,6 +50,14 @@ main()
         return 1;
     }
 
+    init();
+    load("./roms/IBM Logo.ch8");
+
+    for (int i = 0; i < 21; i += 1) {
+        debug();
+        cycle();
+        puts("");
+    }
 
     while (running) {
         SDL_Event event;
@@ -74,14 +82,26 @@ main()
         void *pixels;
         int pitch;
         unsigned char *pixel;
+        char *in;
+
         SDL_LockTexture(screen, 0, &pixels, &pitch);
         pixel = pixels;
+        in = &screen_buffer;
+
         for (int y = 0; y < 32; y += 1) {
             for (int x = 0; x < 64; x += 1) {
-                *pixel = 0x00; pixel += 1;
-                *pixel = 0xff; pixel += 1;
-                *pixel = 0xff; pixel += 1;
-                *pixel = 0xff; pixel += 1;
+                if (*in) {
+                    *pixel = 0x00; pixel += 1;
+                    *pixel = 0xff; pixel += 1;
+                    *pixel = 0xff; pixel += 1;
+                    *pixel = 0xff; pixel += 1;
+                } else {
+                    *pixel = 0x00; pixel += 1;
+                    *pixel = 0x00; pixel += 1;
+                    *pixel = 0x00; pixel += 1;
+                    *pixel = 0x00; pixel += 1;
+                }
+                in += 1;
             }
         }
         SDL_UnlockTexture(screen);
@@ -100,20 +120,6 @@ main()
 
 
 
-    /*
-    init();
-    load("./roms/IBM Logo.ch8");
-
-    for (int i = 0; i < 21; i += 1) {
-        //clear_screen();
-        debug();
-        cycle();
-        puts("");
-        //puts(screen);
-    }
-    puts(screen);
-
-    */
 
     SDL_DestroyTexture(screen);
     SDL_DestroyRenderer(renderer);
