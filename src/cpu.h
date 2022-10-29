@@ -8,8 +8,6 @@ https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
 void die2(const char * const msg, const char * const file_name, const int line_number, const char * const func_name);
 #define die(msg) die2(msg, __FILE__, __LINE__, __func__)
 
-void clear_screen(void);
-
 typedef unsigned int   u32;
 typedef unsigned short u16;
 typedef unsigned char  u8;
@@ -27,7 +25,7 @@ u16 i;
 u8  delay_timer;
 u8  sound_timer;
 
-char screen[(65 * 32) + 1] = "";
+char screen_buffer[64 * 32];
 
 u8 font_data[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -60,7 +58,6 @@ init(void) {
     memset(&memory, 0, 0x1000);
     memcpy(&memory[0x50], font_data, sizeof(font_data));
 
-    clear_screen();
     puts("hello");
 
 }
@@ -82,17 +79,6 @@ peek16(u16 address) {
 }
 
 void
-clear_screen(void) {
-    memset(screen, '.', sizeof(screen));
-    int j = 64;
-    for (int i = 0; i < 32; i += 1) {
-        screen[j] = '\n';
-        j += 65;
-    }
-    screen[sizeof(screen) - 1] = '\0';
-}
-
-void
 draw(u8 vx, u8 vy, u8 n) {
     u8 c = 0;
     u16 nnn = i;
@@ -100,20 +86,20 @@ draw(u8 vx, u8 vy, u8 n) {
     u8 y = v[vy];
     u16 offset = 0;
 
-    offset = (y * 65) + x;
+    offset = (y * 64) + x;
     printf("draw x=$%02x, y=$%02x, n=$%x, i=$%03x\n", x, y, n, i);
     for (int j = 0; j < n; j += 1) {
         c = memory[nnn];
-        if (c & 0x80) screen[offset + 0] = '#';
-        if (c & 0x40) screen[offset + 1] = '#';
-        if (c & 0x20) screen[offset + 2] = '#';
-        if (c & 0x10) screen[offset + 3] = '#';
-        if (c & 0x08) screen[offset + 4] = '#';
-        if (c & 0x04) screen[offset + 5] = '#';
-        if (c & 0x02) screen[offset + 6] = '#';
-        if (c & 0x01) screen[offset + 7] = '#';
+        if (c & 0x80) screen_buffer[offset + 0] = '#';
+        if (c & 0x40) screen_buffer[offset + 1] = '#';
+        if (c & 0x20) screen_buffer[offset + 2] = '#';
+        if (c & 0x10) screen_buffer[offset + 3] = '#';
+        if (c & 0x08) screen_buffer[offset + 4] = '#';
+        if (c & 0x04) screen_buffer[offset + 5] = '#';
+        if (c & 0x02) screen_buffer[offset + 6] = '#';
+        if (c & 0x01) screen_buffer[offset + 7] = '#';
         nnn += 1;
-        offset += 65;
+        offset += 64;
     }
 }
 
@@ -132,8 +118,7 @@ cycle(void) {
     case 0x0000:
         switch (op & 0x0fff) {
         case 0x00e0:
-            puts("clear screen");
-            clear_screen();
+            memset(screen_buffer, sizeof(screen_buffer), 0);
             break;
 
         case 0x00ee:
