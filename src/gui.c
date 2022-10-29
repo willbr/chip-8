@@ -7,6 +7,8 @@
 
 SDL_Window *window     = NULL;
 SDL_Renderer *renderer = NULL;
+SDL_Texture *screen    = NULL;
+SDL_Rect r;
 
 int
 main()
@@ -37,6 +39,17 @@ main()
         return 1;
     }
 
+    screen = SDL_CreateTexture(
+            renderer,
+            SDL_PIXELFORMAT_RGBA8888,
+            SDL_TEXTUREACCESS_STREAMING,
+            64, 32);
+
+    if (screen == NULL) {
+        printf("create texture failed: %s\n", SDL_GetError());
+        return 1;
+    }
+
 
     while (running) {
         SDL_Event event;
@@ -58,8 +71,27 @@ main()
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-        SDL_RenderDrawPoint(renderer, 300, 300);
+        void *pixels;
+        int pitch;
+        unsigned char *pixel;
+        SDL_LockTexture(screen, 0, &pixels, &pitch);
+        pixel = pixels;
+        for (int y = 0; y < 32; y += 1) {
+            for (int x = 0; x < 64; x += 1) {
+                *pixel = 0x00; pixel += 1;
+                *pixel = 0xff; pixel += 1;
+                *pixel = 0xff; pixel += 1;
+                *pixel = 0xff; pixel += 1;
+            }
+        }
+        SDL_UnlockTexture(screen);
+
+        SDL_Rect dest;
+        dest.x = 200;
+        dest.y = 200;
+        dest.w = 64*4;
+        dest.h = 32*4;
+        SDL_RenderCopy(renderer, screen, NULL, &dest);
 
         SDL_RenderPresent(renderer);
 
@@ -83,6 +115,7 @@ main()
 
     */
 
+    SDL_DestroyTexture(screen);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
