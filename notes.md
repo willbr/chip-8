@@ -1,6 +1,9 @@
 notes from:
 * https://en.wikipedia.org/wiki/CHIP-8
 
+roms:
+https://github.com/loktar00/chip8/tree/master/roms
+
 # Memory
 
 memory 0x1000, 4096
