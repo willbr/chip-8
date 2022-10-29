@@ -1,7 +1,22 @@
 notes from:
 * https://en.wikipedia.org/wiki/CHIP-8
 
-roms:
+# Reference
+
+tinyc.games tcc + SDL
+
+https://en.wikipedia.org/wiki/CHIP-8
+https://wiki.xxiivv.com/site/chip8.html
+http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
+
+Use SDL and microui
+https://github.com/rxi/microui
+
+# move emulation to library for hot reloading
+# allow hot reloading of rom via ipc or tcp?
+
+# Roms
+https://github.com/dmatlack/chip8/tree/master/roms/games
 https://github.com/loktar00/chip8/tree/master/roms
 
 # Memory

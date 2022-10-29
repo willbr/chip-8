@@ -21,8 +21,8 @@ u8  key[0x10];
 u8  memory[0x1000];
 u16 stack[0x10];
 u8 v[0x10];
-u16 sp;
-u16 pc;
+u16 stack_pointer;
+u16 program_counter;
 u16 i;
 u8  delay_timer;
 u8  sound_timer;
@@ -50,7 +50,7 @@ u8 font_data[] = {
 
 void
 init(void) {
-    sp = 0, pc = 0x200, i  = 0;
+    stack_pointer = 0, program_counter = 0x200, i  = 0;
     for (int j = 0; i < 16; i += 1)
         v[j] = 0;
 
@@ -73,7 +73,7 @@ debug(void) {
         sep = (j-7 % 8) == 0 ? '\n' : ' ';
         printf("v%x=$%02x%c",  j, v[j], sep);
     }
-    printf("\nsp=$%03x pc=$%03x i=$%03x\n", sp, pc, i);
+    printf("\nsp=$%03x program_counter=$%03x i=$%03x\n", stack_pointer, program_counter, i);
 }
 
 u16
@@ -123,8 +123,8 @@ cycle(void) {
     u8 vx, vy, n, nn;
     u16 nnn;
 
-    op = peek16(pc);
-    pc += 2;
+    op = peek16(program_counter);
+    program_counter += 2;
 
     printf("op: 0x%04x\n", op);
 
@@ -147,8 +147,8 @@ cycle(void) {
         break;
 
     case 0x1000:
-        pc = op & 0xfff;
-        printf("jp $%0rx\n", pc);
+        program_counter = op & 0xfff;
+        printf("jp $%0rx\n", program_counter);
         break;
 
     case 0x2000:
@@ -222,7 +222,6 @@ cycle(void) {
         die("unknown op");
         break;
     }
-
 }
 
 

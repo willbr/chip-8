@@ -1,2 +1,7 @@
 # chip-8
-chip-8?
+
+## todo
+[ ] SDL
+[ ] font-data
+[ ] test rom https://github.com/corax89/chip8-test-rom
+
