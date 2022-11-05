@@ -23,6 +23,7 @@ static unsigned int  index_buf[BUFFER_SIZE];
 static int width  = 800;
 static int height = 600;
 static int buf_idx;
+static int index_idx;
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
@@ -57,44 +58,13 @@ void r_init(void) {
         SDL_UpdateTexture(texture, NULL, ptr, 4 * ATLAS_WIDTH);
         SDL_free(ptr);
     }
-
-    vert_buf[0].x = 400;
-    vert_buf[0].y = 150;
-    color_buf[0].r = 255;
-    color_buf[0].g = 0;
-    color_buf[0].b = 0;
-    color_buf[0].a = 255;
-    tex_buf[0].x = 0;
-    tex_buf[0].y = 0;
-
-    vert_buf[1].x = 200;
-    vert_buf[1].y = 450;
-    color_buf[1].r = 0;
-    color_buf[1].g = 0;
-    color_buf[1].b = 255;
-    color_buf[1].a = 255;
-    tex_buf[1].x = 0;
-    tex_buf[1].y = 0;
-
-    vert_buf[2].x = 600;
-    vert_buf[2].y = 450;
-    color_buf[2].r = 0;
-    color_buf[2].g = 255;
-    color_buf[2].b = 0;
-    color_buf[2].a = 255;
-    tex_buf[2].x = 0;
-    tex_buf[2].y = 0;
-
-    index_buf[0] = 0;
-    index_buf[1] = 1;
-    index_buf[2] = 2;
-
 }
 
 
 static void flush(void) {
   if (buf_idx == 0) { return; }
   buf_idx = 0;
+  index_idx = 0;
 }
 
 
@@ -111,62 +81,54 @@ static void push_quad(mu_Rect dst, mu_Rect src, mu_Color color) {
     source.w = src.w;
     source.h = src.h;
 
-    SDL_SetRenderDrawColor(renderer,
-            color.a,
-            color.b,
-            color.g,
-            color.r);
-    //SDL_RenderCopy(renderer, texture, &source, &dest);
-    //SDL_RenderFillRect(renderer, &dest);
-    // SDL_RenderDrawRect(renderer, &dest);
+    SDL_SetRenderDrawColor(renderer, color.a, color.b, color.g, color.r);
+    SDL_RenderDrawRect(renderer, &dest);
 
-        /*
   if (buf_idx == BUFFER_SIZE) { flush(); }
 
-  int texvert_idx = buf_idx *  8;
-  int   color_idx = buf_idx * 16;
-  int element_idx = buf_idx *  4;
-  int   index_idx = buf_idx *  6;
-  buf_idx++;
+  //buf_idx += 1;
 
   // update texture buffer
   float x = src.x / (float) ATLAS_WIDTH;
   float y = src.y / (float) ATLAS_HEIGHT;
   float w = src.w / (float) ATLAS_WIDTH;
   float h = src.h / (float) ATLAS_HEIGHT;
-  tex_buf[texvert_idx + 0] = x;
-  tex_buf[texvert_idx + 1] = y;
-  tex_buf[texvert_idx + 2] = x + w;
-  tex_buf[texvert_idx + 3] = y;
-  tex_buf[texvert_idx + 4] = x;
-  tex_buf[texvert_idx + 5] = y + h;
-  tex_buf[texvert_idx + 6] = x + w;
-  tex_buf[texvert_idx + 7] = y + h;
+
+  tex_buf[buf_idx + 0].x = x;
+  tex_buf[buf_idx + 0].y = y;
+  tex_buf[buf_idx + 1].x = x + w;
+  tex_buf[buf_idx + 1].y = y;
+  tex_buf[buf_idx + 2].x = x;
+  tex_buf[buf_idx + 2].y = y + h;
+  tex_buf[buf_idx + 3].x = x + w;
+  tex_buf[buf_idx + 3].y = y + h;
 
   // update vertex buffer
-  vert_buf[texvert_idx + 0] = dst.x;
-  vert_buf[texvert_idx + 1] = dst.y;
-  vert_buf[texvert_idx + 2] = dst.x + dst.w;
-  vert_buf[texvert_idx + 3] = dst.y;
-  vert_buf[texvert_idx + 4] = dst.x;
-  vert_buf[texvert_idx + 5] = dst.y + dst.h;
-  vert_buf[texvert_idx + 6] = dst.x + dst.w;
-  vert_buf[texvert_idx + 7] = dst.y + dst.h;
+  vert_buf[buf_idx + 0].x = dst.x;
+  vert_buf[buf_idx + 0].y = dst.y;
+  vert_buf[buf_idx + 1].x = dst.x + dst.w;
+  vert_buf[buf_idx + 1].y = dst.y;
+  vert_buf[buf_idx + 2].x = dst.x;
+  vert_buf[buf_idx + 2].y = dst.y + dst.h;
+  vert_buf[buf_idx + 3].x = dst.x + dst.w;
+  vert_buf[buf_idx + 3].y = dst.y + dst.h;
 
   // update color buffer
-  memcpy(color_buf + color_idx +  0, &color, 4);
-  memcpy(color_buf + color_idx +  4, &color, 4);
-  memcpy(color_buf + color_idx +  8, &color, 4);
-  memcpy(color_buf + color_idx + 12, &color, 4);
+  memcpy(color_buf + buf_idx + 0, &color, sizeof(color_buf[0]));
+  memcpy(color_buf + buf_idx + 1, &color, sizeof(color_buf[0]));
+  memcpy(color_buf + buf_idx + 2, &color, sizeof(color_buf[0]));
+  memcpy(color_buf + buf_idx + 3, &color, sizeof(color_buf[0]));
 
   // update index buffer
-  index_buf[index_idx + 0] = element_idx + 0;
-  index_buf[index_idx + 1] = element_idx + 1;
-  index_buf[index_idx + 2] = element_idx + 2;
-  index_buf[index_idx + 3] = element_idx + 2;
-  index_buf[index_idx + 4] = element_idx + 3;
-  index_buf[index_idx + 5] = element_idx + 1;
-  */
+  index_buf[index_idx++] = buf_idx + 0;
+  index_buf[index_idx++] = buf_idx + 1;
+  index_buf[index_idx++] = buf_idx + 2;
+  index_buf[index_idx++] = buf_idx + 2;
+  index_buf[index_idx++] = buf_idx + 3;
+  index_buf[index_idx++] = buf_idx + 1;
+
+  buf_idx += 4;
+
 }
 
 
@@ -214,7 +176,7 @@ int r_get_text_height(void) {
 
 
 void r_set_clip_rect(mu_Rect rect) {
-  flush();
+  //flush();
   SDL_Rect r;
   r.x = rect.x;
   r.y = rect.y;
@@ -238,8 +200,8 @@ void r_present(void) {
           vert_ptr,  sizeof(vert_buf[0]),
           color_buf, sizeof(color_buf[0]),
           tex_ptr,   sizeof(tex_buf[0]),
-          3,
-          index_buf, 3,
+          buf_idx,
+          index_buf, index_idx,
           sizeof(index_buf[0]));
   SDL_RenderPresent(renderer);
   flush();
