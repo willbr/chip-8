@@ -58,6 +58,7 @@ void r_init(void) {
         SDL_UpdateTexture(texture, NULL, ptr, 4 * ATLAS_WIDTH);
         SDL_free(ptr);
     }
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 }
 
 
@@ -69,24 +70,25 @@ static void flush(void) {
 
 
 static void push_quad(mu_Rect dst, mu_Rect src, mu_Color color) {
-    SDL_Rect dest;
-    dest.x = dst.x;
-    dest.y = dst.y;
-    dest.w = dst.w;
-    dest.h = dst.h;
 
-    SDL_Rect source;
-    source.x = src.x;
-    source.y = src.y;
-    source.w = src.w;
-    source.h = src.h;
+    if (0) {
+        SDL_Rect dest;
+        dest.x = dst.x;
+        dest.y = dst.y;
+        dest.w = dst.w;
+        dest.h = dst.h;
 
-    SDL_SetRenderDrawColor(renderer, color.a, color.b, color.g, color.r);
-    SDL_RenderDrawRect(renderer, &dest);
+        SDL_Rect source;
+        source.x = src.x;
+        source.y = src.y;
+        source.w = src.w;
+        source.h = src.h;
+
+        SDL_SetRenderDrawColor(renderer, color.a, color.b, color.g, color.r);
+        SDL_RenderDrawRect(renderer, &dest);
+    }
 
   if (buf_idx == BUFFER_SIZE) { flush(); }
-
-  //buf_idx += 1;
 
   // update texture buffer
   float x = src.x / (float) ATLAS_WIDTH;
@@ -171,39 +173,39 @@ int r_get_text_width(const char *text, int len) {
 
 
 int r_get_text_height(void) {
-  return 18;
+    return 18;
 }
 
 
 void r_set_clip_rect(mu_Rect rect) {
-  //flush();
-  SDL_Rect r;
-  r.x = rect.x;
-  r.y = rect.y;
-  r.w = rect.w;
-  r.h = rect.h;
-  SDL_RenderSetClipRect(renderer, &r);
+    //flush();
+    SDL_Rect r;
+    r.x = rect.x;
+    r.y = rect.y;
+    r.w = rect.w;
+    r.h = rect.h;
+    SDL_RenderSetClipRect(renderer, &r);
 }
 
 
 void r_clear(mu_Color clr) {
-  flush();
-  SDL_SetRenderDrawColor(renderer, 255, 200, 180, 255);
-  SDL_RenderClear(renderer);
+    flush();
+    SDL_SetRenderDrawColor(renderer, 255, 200, 180, 255);
+    SDL_RenderClear(renderer);
 }
 
 
 void r_present(void) {
     float *vert_ptr = (float*)vert_buf;
     float *tex_ptr = (float*)tex_buf;
-  SDL_RenderGeometryRaw(renderer, texture,
+    SDL_RenderGeometryRaw(renderer, texture,
           vert_ptr,  sizeof(vert_buf[0]),
           color_buf, sizeof(color_buf[0]),
           tex_ptr,   sizeof(tex_buf[0]),
           buf_idx,
           index_buf, index_idx,
           sizeof(index_buf[0]));
-  SDL_RenderPresent(renderer);
-  flush();
+    SDL_RenderPresent(renderer);
+    flush();
 }
 

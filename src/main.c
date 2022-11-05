@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
         }
 
         case SDL_KEYDOWN:
-          exit(EXIT_SUCCESS); break;
+          //exit(EXIT_SUCCESS); break;
         case SDL_KEYUP: {
           int c = key_map[e.key.keysym.sym & 0xff];
           if (c && e.type == SDL_KEYDOWN) { mu_input_keydown(ctx, c); }
