@@ -10,3 +10,9 @@ watch-gui:
 run-gui:
 	run_gui.cmd
 
+watch-demo:
+	watchexec -cr -f "*.c" -f "*.h" "make run-demo"
+
+run-demo:
+	run_demo.cmd
+
