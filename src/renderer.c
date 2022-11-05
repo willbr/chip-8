@@ -15,11 +15,11 @@
 //#define BUFFER_SIZE 16384
 #define BUFFER_SIZE 3
 
-static float   tex_buf[BUFFER_SIZE *  8];
-static float  vert_buf[BUFFER_SIZE *  8];
+static SDL_FPoint  tex_buf[BUFFER_SIZE];
+static SDL_FPoint  vert_buf[BUFFER_SIZE];
 static SDL_Vertex  vert_buf2[BUFFER_SIZE];
-static SDL_Color color_buf[BUFFER_SIZE * 16];
-static GLuint  index_buf[BUFFER_SIZE *  6];
+static SDL_Color color_buf[BUFFER_SIZE];
+static unsigned int  index_buf[BUFFER_SIZE];
 
 static int width  = 800;
 static int height = 600;
@@ -32,23 +32,35 @@ static SDL_Texture *texture;
 
 void r_init(void) {
   /* init SDL window */
-  window = SDL_CreateWindow(
-    "title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-    width, height, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow(
+        "title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        width, height, SDL_WINDOW_OPENGL);
 
-  renderer = SDL_CreateRenderer(
-          window,
-          -1,
-          SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(
+        window,
+        -1,
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
-  texture = SDL_CreateTexture(
-          renderer,
-          SDL_PIXELFORMAT_ABGR8888,
-          SDL_TEXTUREACCESS_STATIC,
-          ATLAS_WIDTH, ATLAS_HEIGHT);
+    texture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_ABGR8888,
+        SDL_TEXTUREACCESS_STATIC,
+        ATLAS_WIDTH, ATLAS_HEIGHT);
 
-  vert_buf2[0].position.x = 400;
-  vert_buf2[0].position.y = 150;
+    {
+        uint8_t *ptr = SDL_malloc(4 * ATLAS_WIDTH * ATLAS_HEIGHT);
+        for (int x = 0; x < ATLAS_WIDTH * ATLAS_HEIGHT; x += 1) {
+            ptr[4 * x + 0] = 255;
+            ptr[4 * x + 1] = 255;
+            ptr[4 * x + 2] = 255;
+            ptr[4 * x + 3] = atlas_texture[x];
+        }
+        SDL_UpdateTexture(texture, NULL, ptr, 4 * ATLAS_WIDTH);
+        SDL_free(ptr);
+    }
+
+  vert_buf2[0].position.x = 40;
+  vert_buf2[0].position.y = 15;
   vert_buf2[0].color.r = 255;
   vert_buf2[0].color.g = 0;
   vert_buf2[0].color.b = 0;
@@ -56,8 +68,8 @@ void r_init(void) {
   vert_buf2[0].tex_coord.x = 0;
   vert_buf2[0].tex_coord.y = 0;
 
-  vert_buf2[1].position.x = 200;
-  vert_buf2[1].position.y = 450;
+  vert_buf2[1].position.x = 20;
+  vert_buf2[1].position.y = 45;
   vert_buf2[1].color.r = 0;
   vert_buf2[1].color.g = 0;
   vert_buf2[1].color.b = 255;
@@ -65,14 +77,46 @@ void r_init(void) {
   vert_buf2[1].tex_coord.x = 0;
   vert_buf2[1].tex_coord.y = 0;
 
-  vert_buf2[2].position.x = 600;
-  vert_buf2[2].position.y = 450;
+  vert_buf2[2].position.x = 60;
+  vert_buf2[2].position.y = 45;
   vert_buf2[2].color.r = 0;
   vert_buf2[2].color.g = 255;
   vert_buf2[2].color.b = 0;
   vert_buf2[2].color.a = 255;
   vert_buf2[2].tex_coord.x = 0;
   vert_buf2[2].tex_coord.y = 0;
+
+
+    vert_buf[0].x = 400;
+    vert_buf[0].y = 150;
+    color_buf[0].r = 255;
+    color_buf[0].g = 0;
+    color_buf[0].b = 0;
+    color_buf[0].a = 255;
+    tex_buf[0].x = 0;
+    tex_buf[0].y = 0;
+
+    vert_buf[1].x = 200;
+    vert_buf[1].y = 450;
+    color_buf[1].r = 0;
+    color_buf[1].g = 0;
+    color_buf[1].b = 255;
+    color_buf[1].a = 255;
+    tex_buf[1].x = 0;
+    tex_buf[1].y = 0;
+
+    vert_buf[2].x = 600;
+    vert_buf[2].y = 450;
+    color_buf[2].r = 0;
+    color_buf[2].g = 255;
+    color_buf[2].b = 0;
+    color_buf[2].a = 255;
+    tex_buf[2].x = 0;
+    tex_buf[2].y = 0;
+
+    index_buf[0] = 0;
+    index_buf[1] = 1;
+    index_buf[2] = 2;
 
 }
 
@@ -217,8 +261,17 @@ void r_clear(mu_Color clr) {
 
 
 void r_present(void) {
-  flush();
+    float *vert_ptr = (float*)vert_buf;
+    float *tex_ptr = (float*)tex_buf;
   SDL_RenderGeometry(renderer, NULL, vert_buf2, BUFFER_SIZE * sizeof(SDL_Vertex), NULL, 0);
+  SDL_RenderGeometryRaw(renderer, texture,
+          vert_ptr,  sizeof(vert_buf[0]),
+          color_buf, sizeof(color_buf[0]),
+          tex_ptr,   sizeof(tex_buf[0]),
+          3,
+          index_buf, 3,
+          sizeof(index_buf[0]));
   SDL_RenderPresent(renderer);
+  flush();
 }
 
