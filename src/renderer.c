@@ -7,17 +7,16 @@
 #include <string.h>
 #define _STDINT_H_
 #include <SDL.h>
-#include <SDL_opengl.h>
+//#include <SDL_opengl.h>
 #include <assert.h>
 #include "renderer.h"
 #include "atlas.inl"
 
-//#define BUFFER_SIZE 16384
-#define BUFFER_SIZE 3
+#define BUFFER_SIZE 16384
+//#define BUFFER_SIZE 3
 
 static SDL_FPoint  tex_buf[BUFFER_SIZE];
 static SDL_FPoint  vert_buf[BUFFER_SIZE];
-static SDL_Vertex  vert_buf2[BUFFER_SIZE];
 static SDL_Color color_buf[BUFFER_SIZE];
 static unsigned int  index_buf[BUFFER_SIZE];
 
@@ -58,34 +57,6 @@ void r_init(void) {
         SDL_UpdateTexture(texture, NULL, ptr, 4 * ATLAS_WIDTH);
         SDL_free(ptr);
     }
-
-  vert_buf2[0].position.x = 40;
-  vert_buf2[0].position.y = 15;
-  vert_buf2[0].color.r = 255;
-  vert_buf2[0].color.g = 0;
-  vert_buf2[0].color.b = 0;
-  vert_buf2[0].color.a = 255;
-  vert_buf2[0].tex_coord.x = 0;
-  vert_buf2[0].tex_coord.y = 0;
-
-  vert_buf2[1].position.x = 20;
-  vert_buf2[1].position.y = 45;
-  vert_buf2[1].color.r = 0;
-  vert_buf2[1].color.g = 0;
-  vert_buf2[1].color.b = 255;
-  vert_buf2[1].color.a = 255;
-  vert_buf2[1].tex_coord.x = 0;
-  vert_buf2[1].tex_coord.y = 0;
-
-  vert_buf2[2].position.x = 60;
-  vert_buf2[2].position.y = 45;
-  vert_buf2[2].color.r = 0;
-  vert_buf2[2].color.g = 255;
-  vert_buf2[2].color.b = 0;
-  vert_buf2[2].color.a = 255;
-  vert_buf2[2].tex_coord.x = 0;
-  vert_buf2[2].tex_coord.y = 0;
-
 
     vert_buf[0].x = 400;
     vert_buf[0].y = 150;
@@ -263,7 +234,6 @@ void r_clear(mu_Color clr) {
 void r_present(void) {
     float *vert_ptr = (float*)vert_buf;
     float *tex_ptr = (float*)tex_buf;
-  SDL_RenderGeometry(renderer, NULL, vert_buf2, BUFFER_SIZE * sizeof(SDL_Vertex), NULL, 0);
   SDL_RenderGeometryRaw(renderer, texture,
           vert_ptr,  sizeof(vert_buf[0]),
           color_buf, sizeof(color_buf[0]),
