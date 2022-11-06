@@ -132,8 +132,13 @@ cycle(void) {
         break;
 
     case 0x1000:
-        program_counter = op & 0xfff;
-        printf("jp $%0rx\n", program_counter);
+        nnn = op & 0xfff;
+
+        if (program_counter = nnn)
+            printf("lockup\n");
+
+        program_counter = nnn;
+        printf("jp $%0x\n", program_counter);
         break;
 
     case 0x2000:
