@@ -12,7 +12,7 @@ SDL_Texture *screen    = NULL;
 SDL_Rect r;
 
 TTF_Font *font = NULL;
-SDL_Color forecol = { 0xff, 0x00, 0x00, 0xff };
+SDL_Color forecol = { 0xef, 0xef, 0xef, 0xff };
 
 SDL_Texture *regs_1_texture = NULL;
 SDL_Rect regs_1_rect;
@@ -117,7 +117,7 @@ main()
             }
         }
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
         SDL_RenderClear(renderer);
 
 
@@ -177,6 +177,14 @@ render_screen(void) {
     dest.w = 64*5;
     dest.h = 32*5;
     SDL_RenderCopy(renderer, screen, NULL, &dest);
+
+    /* draw border */
+    dest.x -= 1;
+    dest.y -= 1;
+    dest.w += 2;
+    dest.h += 2;
+    SDL_SetRenderDrawColor(renderer, 40, 40, 40, 255);
+    SDL_RenderDrawRect(renderer, &dest);
 }
 
 void
