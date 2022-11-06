@@ -26,6 +26,7 @@ char regs_1[REG_BUFFER_SIZE] = "";
 char regs_2[REG_BUFFER_SIZE] = "";
 char regs_3[REG_BUFFER_SIZE] = "";
 
+void render_screen(void);
 void render_regs(void);
 
 int
@@ -104,7 +105,6 @@ main()
                             break;
                         case SDLK_j:
                             cycle();
-                            render_regs();
                             break;
                         default:
                             running = SDL_FALSE;
@@ -120,43 +120,9 @@ main()
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        void *pixels;
-        int pitch;
-        unsigned char *pixel;
-        char *in;
 
-        SDL_LockTexture(screen, 0, &pixels, &pitch);
-        pixel = pixels;
-        in = (char*)&screen_buffer;
-
-        for (int y = 0; y < 32; y += 1) {
-            for (int x = 0; x < 64; x += 1) {
-                if (*in) {
-                    *pixel = 0x00; pixel += 1;
-                    *pixel = 0xff; pixel += 1;
-                    *pixel = 0xff; pixel += 1;
-                    *pixel = 0xff; pixel += 1;
-                } else {
-                    *pixel = 0x00; pixel += 1;
-                    *pixel = 0x00; pixel += 1;
-                    *pixel = 0x00; pixel += 1;
-                    *pixel = 0x00; pixel += 1;
-                }
-                in += 1;
-            }
-        }
-        SDL_UnlockTexture(screen);
-
-        SDL_Rect dest;
-        dest.x = 10;
-        dest.y = 10;
-        dest.w = 64*5;
-        dest.h = 32*5;
-        SDL_RenderCopy(renderer, screen, NULL, &dest);
-
-        SDL_RenderCopy(renderer, regs_1_texture, NULL, &regs_1_rect);
-        SDL_RenderCopy(renderer, regs_2_texture, NULL, &regs_2_rect);
-        SDL_RenderCopy(renderer, regs_3_texture, NULL, &regs_3_rect);
+        render_screen();
+        render_regs();
 
         SDL_RenderPresent(renderer);
 
@@ -174,6 +140,43 @@ main()
     puts("goodbye");
 
     return 0;
+}
+
+void
+render_screen(void) {
+    void *pixels;
+    int pitch;
+    unsigned char *pixel;
+    char *in;
+
+    SDL_LockTexture(screen, 0, &pixels, &pitch);
+    pixel = pixels;
+    in = (char*)&screen_buffer;
+
+    for (int y = 0; y < 32; y += 1) {
+        for (int x = 0; x < 64; x += 1) {
+            if (*in) {
+                *pixel = 0x00; pixel += 1;
+                *pixel = 0xff; pixel += 1;
+                *pixel = 0xff; pixel += 1;
+                *pixel = 0xff; pixel += 1;
+            } else {
+                *pixel = 0x00; pixel += 1;
+                *pixel = 0x00; pixel += 1;
+                *pixel = 0x00; pixel += 1;
+                *pixel = 0x00; pixel += 1;
+            }
+            in += 1;
+        }
+    }
+    SDL_UnlockTexture(screen);
+
+    SDL_Rect dest;
+    dest.x = 10;
+    dest.y = 10;
+    dest.w = 64*5;
+    dest.h = 32*5;
+    SDL_RenderCopy(renderer, screen, NULL, &dest);
 }
 
 void
@@ -214,5 +217,10 @@ render_regs(void) {
     regs_3_rect.h = text->h;
     regs_3_texture = SDL_CreateTextureFromSurface(renderer, text);
     SDL_FreeSurface(text);
+
+    SDL_RenderCopy(renderer, regs_1_texture, NULL, &regs_1_rect);
+    SDL_RenderCopy(renderer, regs_2_texture, NULL, &regs_2_rect);
+    SDL_RenderCopy(renderer, regs_3_texture, NULL, &regs_3_rect);
+
 }
 
