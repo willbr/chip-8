@@ -19,7 +19,7 @@ struct chip8_cpu {
     u8  memory[0x1000];
     u16 stack[0x10];
 
-    u8 v[0x10];
+    u8  v[0x10];
     u16 i;
 
     u16 stack_pointer;
@@ -30,6 +30,8 @@ struct chip8_cpu {
 
     char screen_buffer[64 * 32];
 };
+
+void dis(struct chip8_cpu *cpu, char *string, size_t string_capacity);
 
 u8 font_data[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -103,11 +105,15 @@ cycle(struct chip8_cpu *cpu) {
     u16 op;
     u8 vx, vy, n, nn;
     u16 nnn;
+    char dis_buffer[255] = {0};
 
     op = peek16(cpu, cpu->program_counter);
+
+    dis(cpu, dis_buffer, sizeof(dis_buffer));
+    printf("op: 0x%04x\n%s\n", op, dis_buffer);
+
     cpu->program_counter += 2;
 
-    printf("op: 0x%04x\n", op);
 
     switch (op & 0xf000) {
     case 0x0000:
@@ -209,6 +215,110 @@ cycle(struct chip8_cpu *cpu) {
     }
 }
 
+void
+dis(struct chip8_cpu *cpu, char *string, size_t string_capacity) {
+    u16 op;
+    u8 vx, vy, n, nn;
+    u16 nnn;
+
+    op = peek16(cpu, cpu->program_counter);
+
+    switch (op & 0xf000) {
+    case 0x0000:
+        switch (op & 0x0fff) {
+        case 0x00e0:
+            snprintf(string, string_capacity, "clear screen");
+            break;
+
+        case 0x00ee:
+            die("return");
+            break;
+
+        default:
+            die("todo");
+            break;
+        }
+        break;
+
+    case 0x1000:
+        nnn = op & 0xfff;
+
+        if (cpu->program_counter == nnn)
+            snprintf(string, string_capacity, "jp $%0x (lockup)", nnn);
+        else
+            snprintf(string, string_capacity, "jp $%0x", nnn);
+
+        break;
+
+    case 0x2000:
+        die("call nnn");
+        break;
+
+    case 0x3000:
+        die("se vx, byte");
+        break;
+
+    case 0x4000:
+        die("sne vx, byte ");
+        break;
+
+    case 0x5000:
+        die("se vx, vy");
+        break;
+
+    case 0x6000:
+        vx = (op & 0xf00) >> 8;
+        nn = op & 0xff;
+        snprintf(string, string_capacity, "ld v%x, $%02x", vx, nn);
+        break;
+
+    case 0x7000:
+        vx = (op & 0xf00) >> 8;
+        nn = op & 0xff;
+        snprintf(string, string_capacity, "add v%x, $%02x", vx, nn);
+        break;
+
+    case 0x8000:
+        die("multiple ops");
+        break;
+
+    case 0x9000:
+        die("sne vx, vy");
+        break;
+
+    case 0xa000:
+        nnn = op & 0xfff;
+        snprintf(string, string_capacity, "ld i, $%03x", nnn);
+        break;
+
+    case 0xb000:
+        die("jp v0, addr");
+        break;
+
+    case 0xc000:
+        die("rnd vx, byte");
+        break;
+
+    case 0xd000:
+        vx = (op & 0xf00) >> 8;
+        vy = (op & 0xf0)  >> 4;
+        n = op & 0xf;
+        snprintf(string, string_capacity, "draw v%x, v%x, %x", vx, vy, n);
+        break;
+
+    case 0xe000:
+        die("multiple ops");
+        break;
+
+    case 0xf000:
+        die("multiple ops");
+        break;
+
+    default:
+        die("unknown op");
+        break;
+    }
+}
 
 void
 die2(const char * const msg, const char * const file_name, const int source_line_number, const char * const func_name)
