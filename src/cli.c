@@ -2,6 +2,7 @@
 #include "cpu.h"
 
 char cli_screen[(65 * 32) + 1] = {' '};
+struct chip8_cpu *cpu = NULL;
 
 void
 clear_screen(void) {
@@ -17,13 +18,14 @@ clear_screen(void) {
 int
 main(int argc, char **argv)
 {
-    init();
-    load("./roms/IBM Logo.ch8");
+    cpu = malloc(sizeof(struct chip8_cpu));
+    init(cpu);
+    load(cpu, "./roms/IBM Logo.ch8");
 
     for (int i = 0; i < 21; i += 1) {
         //clear_screen();
-        debug();
-        cycle();
+        debug(cpu);
+        cycle(cpu);
         puts("");
         //puts(screen);
     }
@@ -31,7 +33,7 @@ main(int argc, char **argv)
     int j = 0;
     for (int y = 0; y < 32; y += 1) {
         for (int x = 0; x < 64; x += 1) {
-            if (screen_buffer[(y * 64) + x]) {
+            if (cpu->screen_buffer[(y * 64) + x]) {
                 cli_screen[j] = '#';
             } else {
                 cli_screen[j] = '.';
