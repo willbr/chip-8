@@ -129,7 +129,7 @@ cycle(struct chip8_cpu *cpu) {
     case 0x1000:
         nnn = op & 0xfff;
 
-        if (cpu->program_counter = nnn)
+        if (cpu->program_counter == nnn)
             printf("lockup\n");
 
         cpu->program_counter = nnn;
