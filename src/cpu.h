@@ -84,7 +84,7 @@ draw(struct chip8_cpu *cpu, u8 vx, u8 vy, u8 n) {
     u16 offset = 0;
 
     offset = (y * 64) + x;
-    printf("draw x=$%02x, y=$%02x, n=$%x, i=$%03x\n", x, y, n, cpu->i);
+    //printf("draw x=$%02x, y=$%02x, n=$%x, i=$%03x\n", x, y, n, cpu->i);
     for (int j = 0; j < n; j += 1) {
         c = cpu->memory[nnn];
         if (c & 0x80) cpu->screen_buffer[offset + 0] = '#';
@@ -134,12 +134,7 @@ cycle(struct chip8_cpu *cpu) {
 
     case 0x1000:
         nnn = op & 0xfff;
-
-        if (cpu->program_counter == nnn)
-            printf("lockup\n");
-
         cpu->program_counter = nnn;
-        printf("jp $%0x\n", cpu->program_counter);
         break;
 
     case 0x2000:
@@ -162,14 +157,12 @@ cycle(struct chip8_cpu *cpu) {
         vx = (op & 0xf00) >> 8;
         nn = op & 0xff;
         cpu->v[vx] = nn;
-        printf("ld v%x, $%02x\n", vx, nn);
         break;
 
     case 0x7000:
         vx = (op & 0xf00) >> 8;
         nn = op & 0xff;
         cpu->v[vx] += nn;
-        printf("add v%x, $%02x\n", vx, nn);
         break;
 
     case 0x8000:
@@ -183,7 +176,6 @@ cycle(struct chip8_cpu *cpu) {
     case 0xa000:
         nnn = op & 0xfff;
         cpu->i = nnn;
-        printf("ld i, $%03x\n", cpu->i);
         break;
 
     case 0xb000:
@@ -303,7 +295,9 @@ dis(struct chip8_cpu *cpu, char *string, size_t string_capacity) {
         vx = (op & 0xf00) >> 8;
         vy = (op & 0xf0)  >> 4;
         n = op & 0xf;
-        snprintf(string, string_capacity, "draw v%x, v%x, %x", vx, vy, n);
+        u8 x = cpu->v[vx];
+        u8 y = cpu->v[vy];
+        snprintf(string, string_capacity, "draw x=v%x($%02x), y=v%x($%02x), n=$%x, i=$%03x", vx, x, vy, y, n, cpu->i);
         break;
 
     case 0xe000:
