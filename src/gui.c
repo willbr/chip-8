@@ -29,6 +29,8 @@ char regs_3[REG_BUFFER_SIZE] = "";
 void render_screen(void);
 void render_regs(void);
 
+struct chip8_cpu *cpu = NULL;
+
 int
 main()
 {
@@ -78,8 +80,9 @@ main()
         return 1;
     }
 
-    init();
-    load("./roms/IBM Logo.ch8");
+    cpu = malloc(sizeof(struct chip8_cpu));
+    init(cpu);
+    load(cpu, "./roms/IBM Logo.ch8");
 
     /*
     for (int i = 0; i < 21; i += 1) {
@@ -104,7 +107,7 @@ main()
                             running = SDL_FALSE;
                             break;
                         case SDLK_j:
-                            cycle();
+                            cycle(cpu);
                             break;
                         default:
                             running = SDL_FALSE;
@@ -151,7 +154,7 @@ render_screen(void) {
 
     SDL_LockTexture(screen, 0, &pixels, &pitch);
     pixel = pixels;
-    in = (char*)&screen_buffer;
+    in = (char*)&(cpu->screen_buffer[0]);
 
     for (int y = 0; y < 32; y += 1) {
         for (int x = 0; x < 64; x += 1) {
@@ -191,16 +194,18 @@ void
 render_regs(void) {
     SDL_Surface *text = NULL;
     snprintf(regs_1, REG_BUFFER_SIZE,
-            "v0=$%02x v1=$%02x v2=$%02x v3=$%02x v4=$%02x v5=$%02x v6=$%02x v7=$%02x"
-            , v[0] , v[1] , v[2] , v[3] , v[4] , v[5] , v[6] , v[7]);
+            "v0=$%02x v1=$%02x v2=$%02x v3=$%02x v4=$%02x v5=$%02x v6=$%02x v7=$%02x",
+            cpu->v[0] , cpu->v[1] , cpu->v[2] , cpu->v[3] ,
+            cpu->v[4] , cpu->v[5] , cpu->v[6] , cpu->v[7]);
 
     snprintf(regs_2, REG_BUFFER_SIZE,
-            "v8=$%02x v9=$%02x va=$%02x vb=$%02x vc=$%02x vd=$%02x ve=$%02x vf=$%02x"
-            , v[8] , v[9] , v[0xa] , v[0xb] , v[0xc] , v[0xd] , v[0xe] , v[0xf]);
+            "v8=$%02x v9=$%02x va=$%02x vb=$%02x vc=$%02x vd=$%02x ve=$%02x vf=$%02x",
+            cpu->v[8] , cpu->v[9] , cpu->v[0xa] , cpu->v[0xb],
+            cpu->v[0xc] , cpu->v[0xd] , cpu->v[0xe] , cpu->v[0xf]);
 
     snprintf(regs_3, REG_BUFFER_SIZE,
         "sp=$%03x program_counter=$%03x i=$%03x",
-        stack_pointer, program_counter, i);
+        cpu->stack_pointer, cpu->program_counter, cpu->i);
 
     text = TTF_RenderText_Blended(font, regs_1, forecol);
     regs_1_rect.x = 10;
