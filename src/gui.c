@@ -6,6 +6,8 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+#define LINE_STEP 15
+
 SDL_Window *window     = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Texture *screen    = NULL;
@@ -14,20 +16,12 @@ SDL_Rect r;
 TTF_Font *font = NULL;
 SDL_Color forecol = { 0xef, 0xef, 0xef, 0xff };
 
-SDL_Texture *regs_1_texture = NULL;
-SDL_Rect regs_1_rect;
-SDL_Texture *regs_2_texture = NULL;
-SDL_Rect regs_2_rect;
-SDL_Texture *regs_3_texture = NULL;
-SDL_Rect regs_3_rect;
-
-#define REG_BUFFER_SIZE 255
-char regs_1[REG_BUFFER_SIZE] = "";
-char regs_2[REG_BUFFER_SIZE] = "";
-char regs_3[REG_BUFFER_SIZE] = "";
 
 void render_screen(void);
 void render_regs(void);
+void render_dis(void);
+void render_memory(void);
+void render_text(TTF_Font *font, char *buffer, SDL_Color *forecol, int x, int y);
 
 struct chip8_cpu *cpu = NULL;
 
@@ -52,13 +46,13 @@ main()
             800, 600,
             SDL_WINDOW_OPENGL);
     if (window == NULL) {
-        printf("create window failed: %s\n", SDL_GetError());
+        fprintf(stderr, "create window failed: %s\n", SDL_GetError());
         return 1;
     }
 
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (!renderer) {
-        printf("create renderer failed: %s\n", SDL_GetError());
+        fprintf(stderr, "create renderer failed: %s\n", SDL_GetError());
         return 1;
     }
 
@@ -69,12 +63,12 @@ main()
             64, 32);
 
     if (screen == NULL) {
-        printf("create texture failed: %s\n", SDL_GetError());
+        fprintf(stderr, "create texture failed: %s\n", SDL_GetError());
         return 1;
     }
 
 
-    font = TTF_OpenFont("c:\\windows\\fonts\\consola.ttf", 18);
+    font = TTF_OpenFont("c:\\windows\\fonts\\consola.ttf", 14);
     if (!font) {
         fprintf(stderr, "%s\n", TTF_GetError());
         return 1;
@@ -126,6 +120,8 @@ main()
 
         render_screen();
         render_regs();
+        render_memory();
+        render_dis();
 
         SDL_RenderPresent(renderer);
 
@@ -192,48 +188,106 @@ render_screen(void) {
 
 void
 render_regs(void) {
-    SDL_Surface *text = NULL;
-    snprintf(regs_1, REG_BUFFER_SIZE,
+#define REG_BUFFER_SIZE 255
+    static char buffer[REG_BUFFER_SIZE] = "";
+
+    snprintf(buffer, REG_BUFFER_SIZE,
             "v0=$%02x v1=$%02x v2=$%02x v3=$%02x v4=$%02x v5=$%02x v6=$%02x v7=$%02x",
             cpu->v[0] , cpu->v[1] , cpu->v[2] , cpu->v[3] ,
             cpu->v[4] , cpu->v[5] , cpu->v[6] , cpu->v[7]);
+    render_text(font, buffer, &forecol, 345, 15);
 
-    snprintf(regs_2, REG_BUFFER_SIZE,
+    snprintf(buffer, REG_BUFFER_SIZE,
             "v8=$%02x v9=$%02x va=$%02x vb=$%02x vc=$%02x vd=$%02x ve=$%02x vf=$%02x",
             cpu->v[8] , cpu->v[9] , cpu->v[0xa] , cpu->v[0xb],
             cpu->v[0xc] , cpu->v[0xd] , cpu->v[0xe] , cpu->v[0xf]);
+    render_text(font, buffer, &forecol, 345, 40);
 
-    snprintf(regs_3, REG_BUFFER_SIZE,
-        "sp=$%03x program_counter=$%03x i=$%03x",
+    snprintf(buffer, REG_BUFFER_SIZE,
+        "sp=$%03x pc=$%03x i=$%03x",
         cpu->stack_pointer, cpu->program_counter, cpu->i);
+    render_text(font, buffer, &forecol, 345, 65);
+}
 
-    text = TTF_RenderText_Blended(font, regs_1, forecol);
-    regs_1_rect.x = 10;
-    regs_1_rect.y = 200;
-    regs_1_rect.w = text->w;
-    regs_1_rect.h = text->h;
-    regs_1_texture = SDL_CreateTextureFromSurface(renderer, text);
+void
+render_dis(void) {
+#define DIS_BUFFER_SIZE 255
+    static char buffer[DIS_BUFFER_SIZE] = "";
+    static char dis_buffer[DIS_BUFFER_SIZE] = "";
+    int x = 345;
+    int y = 200;
+    u16 op = 0;
+    u16 pc = cpu->program_counter;
+
+    snprintf(buffer, DIS_BUFFER_SIZE, "addr hex. op..");
+    render_text(font, buffer, &forecol, x, y);
+    y += LINE_STEP;
+
+
+    for (int i = 0; i < 20; i += 1, y += LINE_STEP, pc += 2) {
+        dis(cpu, pc, dis_buffer, DIS_BUFFER_SIZE);
+        op = peek16(cpu, pc);
+        snprintf(buffer, DIS_BUFFER_SIZE, "%04x %04x %s", pc, op, dis_buffer);
+        render_text(font, buffer, &forecol, x, y);
+    }
+}
+
+
+void
+render_memory(void) {
+#define MEMORY_BUFFER_SIZE 255
+    static char buffer[MEMORY_BUFFER_SIZE] = "";
+    int x = 10;
+    int y = 200;
+    u16 pc = 0x200;
+    u8 b0 = 0;
+    u8 b1 = 0;
+    u8 b2 = 0;
+    u8 b3 = 0;
+    u8 b4 = 0;
+    u8 b5 = 0;
+    u8 b6 = 0;
+    u8 b7 = 0;
+    static char s[9] = "........";
+
+    snprintf(buffer, MEMORY_BUFFER_SIZE, "addr 0000 0000 0000 0000 ........");
+    render_text(font, buffer, &forecol, x, y);
+
+    y += LINE_STEP;
+
+    for (int i = 0; i < 20; i += 1, y += LINE_STEP) {
+#define X(n) b##n = cpu->memory[pc + n]; s[n] = b##n >= ' ' ? b##n : '.';
+        X(0)
+        X(1)
+        X(2)
+        X(3)
+        X(4)
+        X(5)
+        X(6)
+        X(7)
+#undef X
+        snprintf(buffer, MEMORY_BUFFER_SIZE, "%04x %02x%02x %02x%02x %02x%02x %02x%02x %s",
+                pc,
+                b0, b1, b2, b3, b4, b5, b6, b7,
+                s);
+        pc += 8;
+        render_text(font, buffer, &forecol, x, y);
+    }
+}
+
+void
+render_text(TTF_Font *font, char *buffer, SDL_Color *forecol, int x, int y) {
+    static SDL_Surface *text = NULL;
+    static SDL_Rect regs_rect;
+    static SDL_Texture *regs_texture = NULL;
+
+    text = TTF_RenderText_Blended(font, buffer, *forecol);
+    regs_rect.x = x;
+    regs_rect.y = y;
+    regs_rect.w = text->w;
+    regs_rect.h = text->h;
+    regs_texture = SDL_CreateTextureFromSurface(renderer, text);
     SDL_FreeSurface(text);
-
-    text = TTF_RenderText_Blended(font, regs_2, forecol);
-    regs_2_rect.x = 10;
-    regs_2_rect.y = 230;
-    regs_2_rect.w = text->w;
-    regs_2_rect.h = text->h;
-    regs_2_texture = SDL_CreateTextureFromSurface(renderer, text);
-    SDL_FreeSurface(text);
-
-    text = TTF_RenderText_Blended(font, regs_3, forecol);
-    regs_3_rect.x = 10;
-    regs_3_rect.y = 260;
-    regs_3_rect.w = text->w;
-    regs_3_rect.h = text->h;
-    regs_3_texture = SDL_CreateTextureFromSurface(renderer, text);
-    SDL_FreeSurface(text);
-
-    SDL_RenderCopy(renderer, regs_1_texture, NULL, &regs_1_rect);
-    SDL_RenderCopy(renderer, regs_2_texture, NULL, &regs_2_rect);
-    SDL_RenderCopy(renderer, regs_3_texture, NULL, &regs_3_rect);
-
+    SDL_RenderCopy(renderer, regs_texture, NULL, &regs_rect);
 }
 

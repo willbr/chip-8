@@ -31,7 +31,7 @@ struct chip8_cpu {
     char screen_buffer[64 * 32];
 };
 
-void dis(struct chip8_cpu *cpu, char *string, size_t string_capacity);
+void dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity);
 
 u8 font_data[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -109,7 +109,7 @@ cycle(struct chip8_cpu *cpu) {
 
     op = peek16(cpu, cpu->program_counter);
 
-    dis(cpu, dis_buffer, sizeof(dis_buffer));
+    dis(cpu, cpu->program_counter, dis_buffer, sizeof(dis_buffer));
     printf("op: 0x%04x\n%s\n", op, dis_buffer);
 
     cpu->program_counter += 2;
@@ -208,12 +208,12 @@ cycle(struct chip8_cpu *cpu) {
 }
 
 void
-dis(struct chip8_cpu *cpu, char *string, size_t string_capacity) {
+dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
     u16 op;
     u8 vx, vy, n, nn;
     u16 nnn;
 
-    op = peek16(cpu, cpu->program_counter);
+    op = peek16(cpu, pc);
 
     switch (op & 0xf000) {
     case 0x0000:
@@ -223,11 +223,11 @@ dis(struct chip8_cpu *cpu, char *string, size_t string_capacity) {
             break;
 
         case 0x00ee:
-            die("return");
+            snprintf(string, string_capacity, "return");
             break;
 
         default:
-            die("todo");
+            snprintf(string, string_capacity, "TODO multiple ops %04x", op);
             break;
         }
         break;
@@ -243,15 +243,15 @@ dis(struct chip8_cpu *cpu, char *string, size_t string_capacity) {
         break;
 
     case 0x2000:
-        die("call nnn");
+        snprintf(string, string_capacity, "TODO call nnn %04x", op);
         break;
 
     case 0x3000:
-        die("se vx, byte");
+        snprintf(string, string_capacity, "TODO se vx, byte %04x", op);
         break;
 
     case 0x4000:
-        die("sne vx, byte ");
+        snprintf(string, string_capacity, "TODO sne vx, byte %04x", op);
         break;
 
     case 0x5000:
@@ -271,11 +271,11 @@ dis(struct chip8_cpu *cpu, char *string, size_t string_capacity) {
         break;
 
     case 0x8000:
-        die("multiple ops");
+        snprintf(string, string_capacity, "TODO multiple ops %04x", op);
         break;
 
     case 0x9000:
-        die("sne vx, vy");
+        snprintf(string, string_capacity, "TODO sne vx, vy %04x", op);
         break;
 
     case 0xa000:
@@ -284,11 +284,11 @@ dis(struct chip8_cpu *cpu, char *string, size_t string_capacity) {
         break;
 
     case 0xb000:
-        die("jp v0, addr");
+        snprintf(string, string_capacity, "TODO jp v0, addr %04x", op);
         break;
 
     case 0xc000:
-        die("rnd vx, byte");
+        snprintf(string, string_capacity, "TODO rnd vx, byte %04x", op);
         break;
 
     case 0xd000:
@@ -301,15 +301,15 @@ dis(struct chip8_cpu *cpu, char *string, size_t string_capacity) {
         break;
 
     case 0xe000:
-        die("multiple ops");
+        snprintf(string, string_capacity, "TODO multiple ops %04x", op);
         break;
 
     case 0xf000:
-        die("multiple ops");
+        snprintf(string, string_capacity, "TODO multiple ops %04x", op);
         break;
 
     default:
-        die("unknown op");
+        snprintf(string, string_capacity, "TODO multiple ops %04x", op);
         break;
     }
 }
