@@ -28,19 +28,20 @@ struct chip8_cpu *cpu = NULL;
 int
 main()
 {
-    SDL_bool running = SDL_TRUE;
+    SDL_bool gui_running = SDL_TRUE;
+    SDL_bool cpu_running = SDL_FALSE;
+    int cycles_per_frame = 10000;
 
-    puts("hi");
-    printf("%s\n", SDL_GetBasePath());
-    printf("%s\n", SDL_GetPrefPath("org", "app"));
-    printf("%s\n", SDL_GetPlatform());
+    printf("BasePath: %s\n", SDL_GetBasePath());
+    printf("PrefPath: %s\n", SDL_GetPrefPath("org", "app"));
+    printf("Platform: %s\n", SDL_GetPlatform());
 
     SDL_Init(SDL_INIT_VIDEO);
 
     TTF_Init();
 
     window = SDL_CreateWindow(
-            "title",
+            "CHIP 8",
             SDL_WINDOWPOS_CENTERED,
             SDL_WINDOWPOS_CENTERED,
             800, 600,
@@ -87,24 +88,36 @@ main()
     */
 
 
-    while (running) {
+    while (gui_running) {
         SDL_Event event;
+
+        if (cpu_running) {
+            for (int i = 0; i < cycles_per_frame; i += 1)
+                cycle(cpu);
+        }
+
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case SDL_QUIT:
-                    running = SDL_FALSE;
+                    gui_running = SDL_FALSE;
                     break;
 
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.sym) {
+                        case SDLK_ESCAPE:
+                            cpu_running = SDL_FALSE;
+                            break;
                         case SDLK_q:
-                            running = SDL_FALSE;
+                            gui_running = SDL_FALSE;
+                            break;
+                        case SDLK_c:
+                            cpu_running = SDL_TRUE;
                             break;
                         case SDLK_j:
                             cycle(cpu);
                             break;
                         default:
-                            running = SDL_FALSE;
+                            gui_running = SDL_FALSE;
                             break;
                     }
                     break;
@@ -135,8 +148,6 @@ main()
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-
-    puts("goodbye");
 
     return 0;
 }
@@ -219,10 +230,13 @@ render_dis(void) {
     u16 op = 0;
     u16 pc = cpu->program_counter;
 
-    snprintf(buffer, DIS_BUFFER_SIZE, "addr hex. op..");
+    snprintf(buffer, DIS_BUFFER_SIZE, "addr hex  op");
     render_text(font, buffer, &forecol, x, y);
     y += LINE_STEP;
 
+    snprintf(buffer, DIS_BUFFER_SIZE, "==== ==== ====");
+    render_text(font, buffer, &forecol, x, y);
+    y += LINE_STEP;
 
     for (int i = 0; i < 20; i += 1, y += LINE_STEP, pc += 2) {
         dis(cpu, pc, dis_buffer, DIS_BUFFER_SIZE);
@@ -250,9 +264,12 @@ render_memory(void) {
     u8 b7 = 0;
     static char s[9] = "........";
 
-    snprintf(buffer, MEMORY_BUFFER_SIZE, "addr 0000 0000 0000 0000 ........");
+    snprintf(buffer, MEMORY_BUFFER_SIZE, "addr 0123 4567 89ab cdef ........");
     render_text(font, buffer, &forecol, x, y);
+    y += LINE_STEP;
 
+    snprintf(buffer, MEMORY_BUFFER_SIZE, "==== ==== ==== ==== ==== ========");
+    render_text(font, buffer, &forecol, x, y);
     y += LINE_STEP;
 
     for (int i = 0; i < 20; i += 1, y += LINE_STEP) {
