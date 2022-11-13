@@ -239,7 +239,7 @@ render_memory(void) {
     static char buffer[MEMORY_BUFFER_SIZE] = "";
     int x = 10;
     int y = 200;
-    u16 pc = 0x200;
+    u16 pc = cpu->i;
     u8 b0 = 0;
     u8 b1 = 0;
     u8 b2 = 0;
