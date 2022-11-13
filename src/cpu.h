@@ -110,7 +110,7 @@ cycle(struct chip8_cpu *cpu) {
     op = peek16(cpu, cpu->program_counter);
 
     dis(cpu, cpu->program_counter, dis_buffer, sizeof(dis_buffer));
-    printf("op: 0x%04x\n%s\n", op, dis_buffer);
+    //printf("op: 0x%04x\n%s\n", op, dis_buffer);
 
     cpu->program_counter += 2;
 
