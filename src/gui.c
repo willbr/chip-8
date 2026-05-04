@@ -32,14 +32,8 @@ void mem_window(mu_Context *ctx);
 
 #define MAX_ROMS 256
 static char rom_files[MAX_ROMS][256];
+static char rom_names[MAX_ROMS][64];
 static int rom_count = 0;
-
-static void add_rom(const char *path) {
-    if (rom_count >= MAX_ROMS) return;
-    strncpy(rom_files[rom_count], path, 255);
-    rom_files[rom_count][255] = '\0';
-    rom_count++;
-}
 
 static void scan_dir(const char *dir) {
     char pattern[256];
@@ -51,6 +45,8 @@ static void scan_dir(const char *dir) {
     do {
         if (rom_count >= MAX_ROMS) break;
         snprintf(rom_files[rom_count], 256, "%s\\%s", dir, fd.cFileName);
+        strncpy(rom_names[rom_count], fd.cFileName, 63);
+        rom_names[rom_count][63] = '\0';
         rom_count++;
     } while (FindNextFileA(h, &fd));
     FindClose(h);
@@ -298,11 +294,13 @@ controls_window(mu_Context *ctx) {
         if (mu_button(ctx, "Step"))  { cycle(cpu); }
         if (mu_button(ctx, "ROM"))   { mu_open_popup(ctx, "Load ROM"); }
         if (mu_begin_popup(ctx, "Load ROM")) {
-            mu_layout_row(ctx, 1, (int[]){-1}, 0);
+            int ph = 20 + rom_count * 25;
+            if (ph > 300) ph = 300;
+            mu_layout_row(ctx, 1, (int[]){200}, 0);
             mu_begin_panel(ctx, "rom-list");
             mu_layout_row(ctx, 1, (int[]){-1}, 0);
             for (int i = 0; i < rom_count; i++) {
-                if (mu_button(ctx, rom_files[i])) {
+                if (mu_button(ctx, rom_names[i])) {
                     init(cpu);
                     load(cpu, rom_files[i]);
                     cpu_running = SDL_FALSE;
