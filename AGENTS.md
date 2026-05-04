@@ -27,8 +27,8 @@ Toolchain: **tcc** (Tiny C Compiler) + **SDL2** 2.24.1 + **SDL_ttf** 2.20.1 on W
 - `cpu.h` is a header with function definitions, not a proper `.c`/`.h` split. Do not try to compile it separately.
 - `_STDINT_H_` is defined before `#include <SDL.h>` to prevent SDL's stdint shim from conflicting with tcc. Keep this pattern in SDL files.
 - Binaries (`*.exe`) in `bin/` and repo root should **not** be committed. `.gitignore` already excludes `*.exe`.
-- ROMs load at `0x200`; font data is defined in `cpu.h` but **not loaded into memory**.
+- ROMs load at `0x200`; font data is defined in `cpu.h` and loaded into memory at `0x50` on `init()`.
 
 ## Known incomplete
 
-Most opcodes are stubbed with `die()`. Missing: subroutines (`0x2NNN`, `0x00EE`), skip instructions (`0x3XNN`, `0x4XNN`, `0x5XY0`, `0x9XY0`), arithmetic (`0x8XY*`), random (`0xCXNN`), input (`0xEXXX`, `0xFX0A`), delay/sound timers, hex keyboard handling. See `README.md` todo list.
+All standard CHIP-8 opcodes are implemented in `cycle()` and disassembled in `dis()`. The `0NNN` opcode is ignored (standard for modern interpreters). Remaining work is on the meta/features side — see `README.md` todo list.

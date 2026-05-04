@@ -143,7 +143,7 @@ cycle(struct chip8_cpu *cpu) {
             break;
 
         default:
-            die("todo");
+            /* 0NNN is ignored by modern CHIP-8 interpreters */
             break;
         }
         break;
@@ -339,7 +339,8 @@ dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
             break;
 
         default:
-            snprintf(string, string_capacity, "TODO multiple ops %04x", op);
+            nnn = op & 0x0fff;
+            snprintf(string, string_capacity, "sys $%03x (ignored)", nnn);
             break;
         }
         break;
@@ -355,19 +356,26 @@ dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
         break;
 
     case 0x2000:
-        snprintf(string, string_capacity, "TODO call nnn %04x", op);
+        nnn = op & 0xfff;
+        snprintf(string, string_capacity, "call $%03x", nnn);
         break;
 
     case 0x3000:
-        snprintf(string, string_capacity, "TODO se vx, byte %04x", op);
+        vx = (op & 0x0f00) >> 8;
+        nn = op & 0x00ff;
+        snprintf(string, string_capacity, "se v%x, $%02x", vx, nn);
         break;
 
     case 0x4000:
-        snprintf(string, string_capacity, "TODO sne vx, byte %04x", op);
+        vx = (op & 0x0f00) >> 8;
+        nn = op & 0x00ff;
+        snprintf(string, string_capacity, "sne v%x, $%02x", vx, nn);
         break;
 
     case 0x5000:
-        snprintf(string, string_capacity, "TODO se vx, vy %04x", op);
+        vx = (op & 0x0f00) >> 8;
+        vy = (op & 0x00f0) >> 4;
+        snprintf(string, string_capacity, "se v%x, v%x", vx, vy);
         break;
 
     case 0x6000:
@@ -383,11 +391,26 @@ dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
         break;
 
     case 0x8000:
-        snprintf(string, string_capacity, "TODO multiple ops %04x", op);
+        vx = (op & 0x0f00) >> 8;
+        vy = (op & 0x00f0) >> 4;
+        switch (op & 0x000f) {
+        case 0x0: snprintf(string, string_capacity, "ld v%x, v%x", vx, vy); break;
+        case 0x1: snprintf(string, string_capacity, "or v%x, v%x", vx, vy); break;
+        case 0x2: snprintf(string, string_capacity, "and v%x, v%x", vx, vy); break;
+        case 0x3: snprintf(string, string_capacity, "xor v%x, v%x", vx, vy); break;
+        case 0x4: snprintf(string, string_capacity, "add v%x, v%x", vx, vy); break;
+        case 0x5: snprintf(string, string_capacity, "sub v%x, v%x", vx, vy); break;
+        case 0x6: snprintf(string, string_capacity, "shr v%x", vx); break;
+        case 0x7: snprintf(string, string_capacity, "subn v%x, v%x", vx, vy); break;
+        case 0xe: snprintf(string, string_capacity, "shl v%x", vx); break;
+        default:  snprintf(string, string_capacity, "unknown 8xy %04x", op); break;
+        }
         break;
 
     case 0x9000:
-        snprintf(string, string_capacity, "TODO sne vx, vy %04x", op);
+        vx = (op & 0x0f00) >> 8;
+        vy = (op & 0x00f0) >> 4;
+        snprintf(string, string_capacity, "sne v%x, v%x", vx, vy);
         break;
 
     case 0xa000:
@@ -396,11 +419,14 @@ dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
         break;
 
     case 0xb000:
-        snprintf(string, string_capacity, "TODO jp v0, addr %04x", op);
+        nnn = op & 0xfff;
+        snprintf(string, string_capacity, "jp v0, $%03x", nnn);
         break;
 
     case 0xc000:
-        snprintf(string, string_capacity, "TODO rnd vx, byte %04x", op);
+        vx = (op & 0x0f00) >> 8;
+        nn = op & 0x00ff;
+        snprintf(string, string_capacity, "rnd v%x, $%02x", vx, nn);
         break;
 
     case 0xd000:
@@ -422,7 +448,7 @@ dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
             snprintf(string, string_capacity, "sknp v%x", vx);
             break;
         default:
-            snprintf(string, string_capacity, "TODO multiple ops %04x", op);
+            snprintf(string, string_capacity, "unknown e %04x", op);
             break;
         }
         break;
@@ -439,12 +465,12 @@ dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
         case 0x33: snprintf(string, string_capacity, "ld b, v%x", vx); break;
         case 0x55: snprintf(string, string_capacity, "ld [i], v%x", vx); break;
         case 0x65: snprintf(string, string_capacity, "ld v%x, [i]", vx); break;
-        default: snprintf(string, string_capacity, "TODO multiple ops %04x", op); break;
+        default: snprintf(string, string_capacity, "unknown f %04x", op); break;
         }
         break;
 
     default:
-        snprintf(string, string_capacity, "TODO multiple ops %04x", op);
+        snprintf(string, string_capacity, "unknown op %04x", op);
         break;
     }
 }

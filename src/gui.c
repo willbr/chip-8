@@ -24,13 +24,14 @@ static Uint64 last_tick = 0;
 
 mu_Context *ctx = NULL;
 
-int win_w = 800;
-int win_h = 600;
+int win_w = 1100;
+int win_h = 800;
 static int roms_window_open = 0;
 static int roms_window_just_opened = 0;
 static char rom_filter[64] = "";
 static mu_Id rom_filter_id = 0;
 static int mouse_key = -1;
+static char current_rom[256] = "";
 
 SDL_AudioDeviceID audio_device = 0;
 
@@ -80,6 +81,7 @@ void render_screen(void);
 void controls_window(mu_Context *ctx);
 void keys_window(mu_Context *ctx);
 void regs_window(mu_Context *ctx);
+void stack_window(mu_Context *ctx);
 void dis_window(mu_Context *ctx);
 void mem_window(mu_Context *ctx);
 void roms_window(mu_Context *ctx);
@@ -192,7 +194,9 @@ main()
     cpu = malloc(sizeof(struct chip8_cpu));
     init(cpu);
     scan_roms();
-    load(cpu, "./roms/IBM Logo.ch8");
+    strncpy(current_rom, "./roms/IBM Logo.ch8", sizeof(current_rom) - 1);
+    current_rom[sizeof(current_rom) - 1] = '\0';
+    load(cpu, current_rom);
 
     screen_tex = SDL_CreateTexture(
             renderer,
@@ -323,6 +327,7 @@ main()
         controls_window(ctx);
         keys_window(ctx);
         regs_window(ctx);
+        stack_window(ctx);
         dis_window(ctx);
         mem_window(ctx);
         if (roms_window_open) roms_window(ctx);
@@ -403,12 +408,13 @@ controls_window(mu_Context *ctx) {
     int w = win_w - 350;
     if (w < 200) w = 200;
     if (mu_begin_window(ctx, "Controls", mu_rect(340, 10, w, 80))) {
-        int bw = (mu_get_current_container(ctx)->body.w - 40) / 4;
+        int bw = (mu_get_current_container(ctx)->body.w - 50) / 5;
         if (bw < 50) bw = 50;
-        mu_layout_row(ctx, 4, (int[]){bw, bw, bw, bw}, 0);
+        mu_layout_row(ctx, 5, (int[]){bw, bw, bw, bw, bw}, 0);
         if (mu_button(ctx, "Run"))   { cpu_running = SDL_TRUE; }
         if (mu_button(ctx, "Pause")) { cpu_running = SDL_FALSE; }
         if (mu_button(ctx, "Step"))  { cycle(cpu); }
+        if (mu_button(ctx, "Reset")) { init(cpu); load(cpu, current_rom); cpu_running = SDL_FALSE; }
         if (mu_button(ctx, "ROM")) {
             if (!roms_window_open) roms_window_just_opened = 1;
             roms_window_open = !roms_window_open;
@@ -431,9 +437,17 @@ keys_window(mu_Context *ctx) {
             mu_Rect r = mu_layout_next(ctx);
             int hovered = mu_mouse_over(ctx, r);
             int pressed = hovered && (ctx->mouse_down & MU_MOUSE_LEFT);
-            mu_Color color = pressed ? mu_color(100, 200, 100, 255) :
-                             hovered ? mu_color(80, 80, 80, 255) :
-                                       mu_color(50, 50, 50, 255);
+            int key_down = cpu->keys[keyvals[i]];
+            mu_Color color;
+            if (pressed) {
+                color = mu_color(100, 200, 100, 255);
+            } else if (key_down) {
+                color = mu_color(100, 200, 200, 255);
+            } else if (hovered) {
+                color = mu_color(80, 80, 80, 255);
+            } else {
+                color = mu_color(50, 50, 50, 255);
+            }
             mu_draw_rect(ctx, r, color);
             int tw = r_get_text_width(labels[i], 1);
             int th = r_get_text_height();
@@ -481,12 +495,38 @@ regs_window(mu_Context *ctx) {
 }
 
 void
+stack_window(mu_Context *ctx) {
+    int w = win_w - 350;
+    if (w < 200) w = 200;
+    if (mu_begin_window(ctx, "Stack", mu_rect(340, 220, w, 170))) {
+        static char buf[64];
+        mu_layout_row(ctx, 4, (int[]){30, 55, 30, 55}, 0);
+        mu_label(ctx, "idx"); mu_label(ctx, "addr");
+        mu_label(ctx, "idx"); mu_label(ctx, "addr");
+        mu_label(ctx, "==="); mu_label(ctx, "====");
+        mu_label(ctx, "==="); mu_label(ctx, "====");
+        for (int i = 0; i < 8; i++) {
+            int j = i + 8;
+            snprintf(buf, sizeof(buf), "%02x", i);
+            mu_label(ctx, buf);
+            snprintf(buf, sizeof(buf), "%04x", cpu->stack[i]);
+            mu_label(ctx, buf);
+            snprintf(buf, sizeof(buf), "%02x", j);
+            mu_label(ctx, buf);
+            snprintf(buf, sizeof(buf), "%04x", cpu->stack[j]);
+            mu_label(ctx, buf);
+        }
+        mu_end_window(ctx);
+    }
+}
+
+void
 dis_window(mu_Context *ctx) {
     int w = win_w - 350;
-    int h = win_h - 240;
+    int h = win_h - 420;
     if (w < 200) w = 200;
     if (h < 100) h = 100;
-    if (mu_begin_window(ctx, "Disassembly", mu_rect(340, 220, w, h))) {
+    if (mu_begin_window(ctx, "Disassembly", mu_rect(340, 400, w, h))) {
         static char b1[64], b2[64], b3[256];
         u16 pc = cpu->program_counter;
         mu_layout_row(ctx, 3, (int[]){40, 45, -1}, 0);
@@ -508,11 +548,14 @@ dis_window(mu_Context *ctx) {
 
 void
 mem_window(mu_Context *ctx) {
-    int h = win_h - 220;
+    int h = win_h - 330;
     if (h < 100) h = 100;
-    if (mu_begin_window(ctx, "Memory", mu_rect(10, 200, 320, h))) {
+    if (mu_begin_window(ctx, "Memory", mu_rect(10, 320, 320, h))) {
+        static char buf[128];
         static char b1[32], b2[32], b3[32], b4[32], b5[32], b6[32];
         u16 pc = cpu->i;
+
+        /* memory dump */
         mu_layout_row(ctx, 6, (int[]){40, 40, 40, 40, 40, -1}, 0);
         mu_label(ctx, "addr"); mu_label(ctx, "0123"); mu_label(ctx, "4567");
         mu_label(ctx, "89ab"); mu_label(ctx, "cdef"); mu_label(ctx, "........");
@@ -555,12 +598,16 @@ roms_window(mu_Context *ctx) {
         }
         for (int i = 0; i < rom_count; i++) {
             if (rom_filter[0] && !str_contains_ci(rom_names[i], rom_filter)) continue;
+            mu_push_id(ctx, &i, sizeof(i));
             if (mu_button(ctx, rom_names[i])) {
                 init(cpu);
-                load(cpu, rom_files[i]);
+                strncpy(current_rom, rom_files[i], sizeof(current_rom) - 1);
+                current_rom[sizeof(current_rom) - 1] = '\0';
+                load(cpu, current_rom);
                 cpu_running = SDL_FALSE;
                 roms_window_open = 0;
             }
+            mu_pop_id(ctx);
         }
         mu_end_window(ctx);
     }

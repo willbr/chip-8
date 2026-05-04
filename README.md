@@ -50,8 +50,13 @@ make mcp-server   # MCP server (stdio transport)
 * [x] Hex keyboard handling
 * [x] Test rom https://github.com/corax89/chip8-test-rom
 * [x] MCP server
-* [ ] Move emulation to a separate library for hot reloading
-* [ ] Hot reload ROM via IPC or TCP
+* [ ] Assembler & Linker
+* [ ] REPL assembler inside the debugger
+* [ ] basic pixel editor in the debugger
+* [ ] pico8 lua syntax language that compiles to assembly
+* [ ] 
+* [ ] 
+* [ ] 
 
 ## References
 
