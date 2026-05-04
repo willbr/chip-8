@@ -27,6 +27,7 @@ static int roms_window_open = 0;
 static int roms_window_just_opened = 0;
 static char rom_filter[64] = "";
 static mu_Id rom_filter_id = 0;
+static int mouse_key = -1;
 
 SDL_AudioDeviceID audio_device = 0;
 
@@ -74,6 +75,7 @@ static int str_contains_ci(const char *haystack, const char *needle) {
 
 void render_screen(void);
 void controls_window(mu_Context *ctx);
+void keys_window(mu_Context *ctx);
 void regs_window(mu_Context *ctx);
 void dis_window(mu_Context *ctx);
 void mem_window(mu_Context *ctx);
@@ -307,6 +309,7 @@ main()
 
         mu_begin(ctx);
         controls_window(ctx);
+        keys_window(ctx);
         regs_window(ctx);
         dis_window(ctx);
         mem_window(ctx);
@@ -399,6 +402,43 @@ controls_window(mu_Context *ctx) {
         if (mu_button(ctx, "ROM")) {
             if (!roms_window_open) roms_window_just_opened = 1;
             roms_window_open = !roms_window_open;
+        }
+        mu_end_window(ctx);
+    }
+}
+
+void
+keys_window(mu_Context *ctx) {
+    const char *labels[16] = {"1","2","3","C","4","5","6","D","7","8","9","E","A","0","B","F"};
+    const int keyvals[16] = {1,2,3,0xC,4,5,6,0xD,7,8,9,0xE,0xA,0,0xB,0xF};
+    if (mu_begin_window(ctx, "Keys", mu_rect(10, 175, 320, 140))) {
+        if (mouse_key != -1) {
+            cpu->keys[mouse_key] = 0;
+            mouse_key = -1;
+        }
+        mu_layout_row(ctx, 4, (int[]){70, 70, 70, 70}, 28);
+        for (int i = 0; i < 16; i++) {
+            mu_Rect r = mu_layout_next(ctx);
+            int hovered = mu_mouse_over(ctx, r);
+            int pressed = hovered && (ctx->mouse_down & MU_MOUSE_LEFT);
+            mu_Color color = pressed ? mu_color(100, 200, 100, 255) :
+                             hovered ? mu_color(80, 80, 80, 255) :
+                                       mu_color(50, 50, 50, 255);
+            mu_draw_rect(ctx, r, color);
+            int tw = r_get_text_width(labels[i], 1);
+            int th = r_get_text_height();
+            mu_draw_text(ctx, ctx->style->font, labels[i], 1,
+                         mu_vec2(r.x + (r.w - tw) / 2, r.y + (r.h - th) / 2),
+                         mu_color(255, 255, 255, 255));
+            if (pressed) {
+                int k = keyvals[i];
+                mouse_key = k;
+                cpu->keys[k] = 1;
+                if (cpu->waiting_for_key) {
+                    cpu->v[cpu->key_register] = k;
+                    cpu->waiting_for_key = 0;
+                }
+            }
         }
         mu_end_window(ctx);
     }
