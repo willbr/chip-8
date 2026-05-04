@@ -8,8 +8,9 @@ if "%1"=="run-gui" goto run-gui
 if "%1"=="watch-demo" goto watch-demo
 if "%1"=="run-demo" goto run-demo
 if "%1"=="hydrate-roms" goto hydrate-roms
+if "%1"=="mcp-server" goto mcp-server
 
-echo Usage: make [watch-cli ^| run-cli ^| watch-gui ^| run-gui ^| watch-demo ^| run-demo ^| hydrate-roms]
+echo Usage: make [watch-cli ^| run-cli ^| watch-gui ^| run-gui ^| watch-demo ^| run-demo ^| hydrate-roms ^| mcp-server]
 exit /b 1
 
 :watch-cli
@@ -50,4 +51,13 @@ xcopy /Y /S %TEMP%\chip8-loktar00\roms\*.ch8 roms\loktar00\ >nul 2>&1
 rmdir /S /Q %TEMP%\chip8-loktar00 >nul 2>&1
 
 echo Done.
+exit /b 0
+
+:mcp-server
+if not exist bin\mcp_cpu.exe (
+    echo Building mcp_cpu.exe...
+    if not exist bin mkdir bin
+    tcc src\mcp_cpu.c -o bin\mcp_cpu.exe
+)
+python mcp_server.py
 exit /b 0

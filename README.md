@@ -15,9 +15,10 @@ A CHIP-8 emulator with a CLI frontend and a GUI debugger. Built with Tiny C Comp
 ## Quick start
 
 ```
-make run-cli   # terminal output
-make run-gui   # SDL2 debugger
-make run-demo  # microui demo (not connected to emulation)
+make run-cli      # terminal output
+make run-gui      # SDL2 debugger
+make run-demo     # microui demo (not connected to emulation)
+make mcp-server   # MCP server (stdio transport)
 ```
 
 ## Architecture
@@ -27,6 +28,8 @@ make run-demo  # microui demo (not connected to emulation)
 | `src/cpu.h` | CPU emulation (header-only: init, cycle, draw, dis, load) |
 | `src/cli.c` | Terminal frontend, prints screen buffer as ASCII |
 | `src/gui.c` | SDL2 + microui debugger with screen, regs, disassembly, memory |
+| `src/mcp_cpu.c` | Headless CHIP-8 emulator for MCP server |
+| `mcp_server.py` | Python MCP server (stdio transport) |
 | `src/main.c` | microui demo UI |
 | `src/renderer.c` | SDL2 rendering backend for microui |
 | `vendors/microui/` | vendor copy of rxi/microui |
@@ -46,7 +49,7 @@ make run-demo  # microui demo (not connected to emulation)
 * [ ] Font data loaded into memory
 * [ ] Hex keyboard handling
 * [ ] Test rom https://github.com/corax89/chip8-test-rom
-* [ ] MCP server
+* [x] MCP server
 * [ ] Move emulation to a separate library for hot reloading
 * [ ] Hot reload ROM via IPC or TCP
 

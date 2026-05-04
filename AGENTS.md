@@ -7,6 +7,7 @@
 | `make run-cli` | Run CLI frontend (tcc -run src/cli.c) |
 | `make run-gui` | Run debugger GUI (runs `run_gui.cmd`) |
 | `make run-demo` | Run microui demo (runs `run_demo.cmd`) |
+| `make mcp-server` | Run MCP server (stdio transport) |
 | `make watch-cli` | Auto-rebuild CLI on `.c`/`.h` change (requires watchexec) |
 
 Toolchain: **tcc** (Tiny C Compiler) + **SDL2** 2.24.1 + **SDL_ttf** 2.20.1 on Windows. No Makefile for building — `run_*.cmd` scripts handle compile+run.
@@ -16,6 +17,8 @@ Toolchain: **tcc** (Tiny C Compiler) + **SDL2** 2.24.1 + **SDL_ttf** 2.20.1 on W
 - `src/cpu.h` — CPU emulation is **header-only** with inline implementations (init, cycle, draw, dis, load). Include it directly.
 - `src/cli.c` — Terminal frontend, prints screen buffer as ASCII.
 - `src/gui.c` — SDL2 + microui debugger showing screen, regs, disassembly, memory.
+- `src/mcp_cpu.c` — headless CHIP-8 emulator process for the MCP server.
+- `mcp_server.py` — Python MCP server (stdio transport) wrapping `mcp_cpu.exe`.
 - `src/main.c` + `src/renderer.c` — microui demo UI. **Not connected to CHIP-8 emulation.**
 - `vendors/microui/` — vendor copy of rxi/microui.
 
