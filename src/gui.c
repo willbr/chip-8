@@ -26,6 +26,17 @@ int win_h = 600;
 static int roms_window_open = 0;
 static char rom_filter[64] = "";
 
+static int str_contains_ci(const char *haystack, const char *needle) {
+    if (!needle[0]) return 1;
+    char h[256], n[64];
+    int i;
+    for (i = 0; haystack[i] && i < 255; i++) h[i] = (haystack[i] >= 'A' && haystack[i] <= 'Z') ? haystack[i] + 32 : haystack[i];
+    h[i] = '\0';
+    for (i = 0; needle[i] && i < 63; i++) n[i] = (needle[i] >= 'A' && needle[i] <= 'Z') ? needle[i] + 32 : needle[i];
+    n[i] = '\0';
+    return strstr(h, n) != NULL;
+}
+
 void render_screen(void);
 void controls_window(mu_Context *ctx);
 void regs_window(mu_Context *ctx);
@@ -392,9 +403,10 @@ roms_window(mu_Context *ctx) {
     if (h > 400) h = 400;
     if (mu_begin_window(ctx, "ROMs", mu_rect(340, 100, 300, h))) {
         mu_layout_row(ctx, 1, (int[]){-1}, 0);
+        mu_set_focus(ctx, mu_get_id(ctx, rom_filter, sizeof(rom_filter)));
         mu_textbox(ctx, rom_filter, sizeof(rom_filter));
         for (int i = 0; i < rom_count; i++) {
-            if (rom_filter[0] && !strstr(rom_names[i], rom_filter)) continue;
+            if (rom_filter[0] && !str_contains_ci(rom_names[i], rom_filter)) continue;
             if (mu_button(ctx, rom_names[i])) {
                 init(cpu);
                 load(cpu, rom_files[i]);
