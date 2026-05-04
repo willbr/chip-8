@@ -17,7 +17,10 @@ SDL_Texture *screen_tex = NULL;
 struct chip8_cpu *cpu = NULL;
 SDL_bool gui_running = SDL_TRUE;
 SDL_bool cpu_running = SDL_FALSE;
-int cycles_per_frame = 10000;
+static const int CPU_HZ = 1000;          /* target CHIP-8 instructions per second */
+static double cpu_cycle_accum = 0.0;     /* fractional cycles carried over frames */
+static double timer_accum = 0.0;         /* accumulator for 60 Hz timers */
+static Uint64 last_tick = 0;
 
 mu_Context *ctx = NULL;
 
@@ -173,7 +176,7 @@ main()
         return 1;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) {
         fprintf(stderr, "create renderer failed: %s\n", SDL_GetError());
         return 1;
@@ -217,15 +220,27 @@ main()
 
     while (gui_running) {
         SDL_Event e;
+        Uint64 now = SDL_GetPerformanceCounter();
+        if (last_tick == 0) last_tick = now;
+        double dt = (double)(now - last_tick) / (double)SDL_GetPerformanceFrequency();
+        last_tick = now;
 
         if (cpu_running) {
-            for (int i = 0; i < cycles_per_frame; i++)
+            cpu_cycle_accum += CPU_HZ * dt;
+            while (cpu_cycle_accum >= 1.0) {
                 cycle(cpu);
+                cpu_cycle_accum -= 1.0;
+            }
         }
 
-        if (cpu->delay_timer > 0) cpu->delay_timer--;
+        timer_accum += dt;
+        while (timer_accum >= 1.0 / 60.0) {
+            if (cpu->delay_timer > 0) cpu->delay_timer--;
+            if (cpu->sound_timer > 0) cpu->sound_timer--;
+            timer_accum -= 1.0 / 60.0;
+        }
+
         if (cpu->sound_timer > 0) {
-            cpu->sound_timer--;
             if (audio_device) SDL_PauseAudioDevice(audio_device, 0);
         } else {
             if (audio_device) SDL_PauseAudioDevice(audio_device, 1);
@@ -281,10 +296,7 @@ main()
                             case SDLK_ESCAPE:
                                 cpu_running = SDL_FALSE;
                                 break;
-                            case SDLK_q:
-                                gui_running = SDL_FALSE;
-                                break;
-                            case SDLK_c:
+                            case SDLK_i:
                                 cpu_running = SDL_TRUE;
                                 break;
                             case SDLK_j:
@@ -331,8 +343,6 @@ main()
 
         r_render();
         SDL_RenderPresent(renderer);
-
-        SDL_Delay(16);
     }
 
     SDL_DestroyTexture(screen_tex);
