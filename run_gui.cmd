@@ -11,6 +11,5 @@ set TTF=.\vendors\SDL2_ttf-2.20.1
 set PATH=%PATH%;%SDL%\lib\%ARCH%
 set PATH=%PATH%;%TTF%\lib\%ARCH%
 
-rem %CC% -DSDL_MAIN_HANDLED -I%SDL%\include -I%TTF%\include -L%SDL%\lib\%ARCH% -L%TTF%\lib\%ARCH% -lSDL2 -lSDL2_ttf -run src\gui.c
-%CC% -DSDL_MAIN_HANDLED -I%SDL%\include -I%TTF%\include -L%SDL%\lib\%ARCH%  -L%TTF%\lib\%ARCH% -lSDL2 -lSDL2_ttf -run src\gui.c
+%CC% -DSDL_MAIN_HANDLED -I%SDL%\include -Ivendors\microui\src -L%SDL%\lib\%ARCH% -lSDL2 vendors\microui\src\microui.c src\renderer.c -run src\gui.c
 

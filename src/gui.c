@@ -1,47 +1,68 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "cpu.h"
 #include <stdint.h>
 #define _STDINT_H_
 
 #include <SDL.h>
-#include <SDL_ttf.h>
-
-#define LINE_STEP 15
+#include "renderer.h"
+#include "microui.h"
 
 SDL_Window *window     = NULL;
 SDL_Renderer *renderer = NULL;
-SDL_Texture *screen    = NULL;
-SDL_Rect r;
-
-TTF_Font *font = NULL;
-SDL_Color forecol = { 0xef, 0xef, 0xef, 0xff };
-
-
-void render_screen(void);
-void render_regs(void);
-void render_dis(void);
-void render_memory(void);
-void render_text(TTF_Font *font, char *buffer, SDL_Color *forecol, int x, int y);
+SDL_Texture *screen_tex = NULL;
 
 struct chip8_cpu *cpu = NULL;
+SDL_bool gui_running = SDL_TRUE;
+SDL_bool cpu_running = SDL_FALSE;
+int cycles_per_frame = 10000;
+
+mu_Context *ctx = NULL;
+
+void render_screen(void);
+void controls_window(mu_Context *ctx);
+void regs_window(mu_Context *ctx);
+void dis_window(mu_Context *ctx);
+void mem_window(mu_Context *ctx);
+
+static int text_width(mu_Font font, const char *text, int len) {
+    if (len == -1) { len = strlen(text); }
+    return r_get_text_width(text, len);
+}
+
+static int text_height(mu_Font font) {
+    return r_get_text_height();
+}
+
+static const char button_map[256] = {
+    [ SDL_BUTTON_LEFT   & 0xff ] =  MU_MOUSE_LEFT,
+    [ SDL_BUTTON_RIGHT  & 0xff ] =  MU_MOUSE_RIGHT,
+    [ SDL_BUTTON_MIDDLE & 0xff ] =  MU_MOUSE_MIDDLE,
+};
+
+static const char key_map[256] = {
+    [ SDLK_LSHIFT       & 0xff ] = MU_KEY_SHIFT,
+    [ SDLK_RSHIFT       & 0xff ] = MU_KEY_SHIFT,
+    [ SDLK_LCTRL        & 0xff ] = MU_KEY_CTRL,
+    [ SDLK_RCTRL        & 0xff ] = MU_KEY_CTRL,
+    [ SDLK_LALT         & 0xff ] = MU_KEY_ALT,
+    [ SDLK_RALT         & 0xff ] = MU_KEY_ALT,
+    [ SDLK_RETURN       & 0xff ] = MU_KEY_RETURN,
+    [ SDLK_BACKSPACE    & 0xff ] = MU_KEY_BACKSPACE,
+};
 
 int
 main()
 {
-    SDL_bool gui_running = SDL_TRUE;
-    SDL_bool cpu_running = SDL_FALSE;
-    int cycles_per_frame = 10000;
-
     printf("BasePath: %s\n", SDL_GetBasePath());
     printf("PrefPath: %s\n", SDL_GetPrefPath("org", "app"));
     printf("Platform: %s\n", SDL_GetPlatform());
 
     SDL_Init(SDL_INIT_VIDEO);
 
-    TTF_Init();
-
     window = SDL_CreateWindow(
-            "CHIP 8",
+            "CHIP-8",
             SDL_WINDOWPOS_CENTERED,
             SDL_WINDOWPOS_CENTERED,
             800, 600,
@@ -57,53 +78,65 @@ main()
         return 1;
     }
 
-    screen = SDL_CreateTexture(
-            renderer,
-            SDL_PIXELFORMAT_RGBA8888,
-            SDL_TEXTUREACCESS_STREAMING,
-            64, 32);
+    r_init_ex(renderer);
 
-    if (screen == NULL) {
-        fprintf(stderr, "create texture failed: %s\n", SDL_GetError());
-        return 1;
-    }
-
-
-    font = TTF_OpenFont("c:\\windows\\fonts\\consola.ttf", 14);
-    if (!font) {
-        fprintf(stderr, "%s\n", TTF_GetError());
-        return 1;
-    }
+    ctx = malloc(sizeof(mu_Context));
+    mu_init(ctx);
+    ctx->text_width = text_width;
+    ctx->text_height = text_height;
 
     cpu = malloc(sizeof(struct chip8_cpu));
     init(cpu);
     load(cpu, "./roms/IBM Logo.ch8");
 
-    /*
-    for (int i = 0; i < 21; i += 1) {
-        debug();
-        cycle();
-        puts("");
+    screen_tex = SDL_CreateTexture(
+            renderer,
+            SDL_PIXELFORMAT_RGBA8888,
+            SDL_TEXTUREACCESS_STREAMING,
+            64, 32);
+    if (screen_tex == NULL) {
+        fprintf(stderr, "create screen texture failed: %s\n", SDL_GetError());
+        return 1;
     }
-    */
-
 
     while (gui_running) {
-        SDL_Event event;
+        SDL_Event e;
 
         if (cpu_running) {
-            for (int i = 0; i < cycles_per_frame; i += 1)
+            for (int i = 0; i < cycles_per_frame; i++)
                 cycle(cpu);
         }
 
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
+        while (SDL_PollEvent(&e)) {
+            switch (e.type) {
                 case SDL_QUIT:
                     gui_running = SDL_FALSE;
                     break;
 
-                case SDL_KEYDOWN:
-                    switch (event.key.keysym.sym) {
+                case SDL_MOUSEMOTION:
+                    mu_input_mousemove(ctx, e.motion.x, e.motion.y);
+                    break;
+
+                case SDL_MOUSEWHEEL:
+                    mu_input_scroll(ctx, 0, e.wheel.y * -30);
+                    break;
+
+                case SDL_TEXTINPUT:
+                    mu_input_text(ctx, e.text.text);
+                    break;
+
+                case SDL_MOUSEBUTTONDOWN:
+                case SDL_MOUSEBUTTONUP: {
+                    int b = button_map[e.button.button & 0xff];
+                    if (b && e.type == SDL_MOUSEBUTTONDOWN) { mu_input_mousedown(ctx, e.button.x, e.button.y, b); }
+                    if (b && e.type == SDL_MOUSEBUTTONUP)   { mu_input_mouseup(ctx, e.button.x, e.button.y, b); }
+                    break;
+                }
+
+                case SDL_KEYDOWN: {
+                    int c = key_map[e.key.keysym.sym & 0xff];
+                    if (c) { mu_input_keydown(ctx, c); }
+                    switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
                             cpu_running = SDL_FALSE;
                             break;
@@ -116,35 +149,45 @@ main()
                         case SDLK_j:
                             cycle(cpu);
                             break;
-                        default:
-                            gui_running = SDL_FALSE;
-                            break;
                     }
                     break;
+                }
 
-                default:
+                case SDL_KEYUP: {
+                    int c = key_map[e.key.keysym.sym & 0xff];
+                    if (c) { mu_input_keyup(ctx, c); }
                     break;
+                }
             }
         }
 
-        SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
-        SDL_RenderClear(renderer);
+        mu_begin(ctx);
+        controls_window(ctx);
+        regs_window(ctx);
+        dis_window(ctx);
+        mem_window(ctx);
+        mu_end(ctx);
 
-
+        r_clear(mu_color(20, 20, 20, 255));
         render_screen();
-        render_regs();
-        render_memory();
-        render_dis();
 
+        mu_Command *cmd = NULL;
+        while (mu_next_command(ctx, &cmd)) {
+            switch (cmd->type) {
+                case MU_COMMAND_TEXT:  r_draw_text(cmd->text.str, cmd->text.pos, cmd->text.color); break;
+                case MU_COMMAND_RECT:  r_draw_rect(cmd->rect.rect, cmd->rect.color); break;
+                case MU_COMMAND_ICON:  r_draw_icon(cmd->icon.id, cmd->icon.rect, cmd->icon.color); break;
+                case MU_COMMAND_CLIP:  r_set_clip_rect(cmd->clip.rect); break;
+            }
+        }
+
+        r_render();
         SDL_RenderPresent(renderer);
 
         SDL_Delay(16);
     }
 
-    TTF_CloseFont(font);
-    TTF_Quit();
-
-    SDL_DestroyTexture(screen);
+    SDL_DestroyTexture(screen_tex);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -159,34 +202,34 @@ render_screen(void) {
     unsigned char *pixel;
     char *in;
 
-    SDL_LockTexture(screen, 0, &pixels, &pitch);
+    SDL_LockTexture(screen_tex, 0, &pixels, &pitch);
     pixel = pixels;
     in = (char*)&(cpu->screen_buffer[0]);
 
-    for (int y = 0; y < 32; y += 1) {
-        for (int x = 0; x < 64; x += 1) {
+    for (int y = 0; y < 32; y++) {
+        for (int x = 0; x < 64; x++) {
             if (*in) {
-                *pixel = 0x00; pixel += 1;
-                *pixel = 0xff; pixel += 1;
-                *pixel = 0xff; pixel += 1;
-                *pixel = 0xff; pixel += 1;
+                *pixel = 0x00; pixel++;
+                *pixel = 0xff; pixel++;
+                *pixel = 0xff; pixel++;
+                *pixel = 0xff; pixel++;
             } else {
-                *pixel = 0x00; pixel += 1;
-                *pixel = 0x00; pixel += 1;
-                *pixel = 0x00; pixel += 1;
-                *pixel = 0x00; pixel += 1;
+                *pixel = 0x00; pixel++;
+                *pixel = 0x00; pixel++;
+                *pixel = 0x00; pixel++;
+                *pixel = 0x00; pixel++;
             }
-            in += 1;
+            in++;
         }
     }
-    SDL_UnlockTexture(screen);
+    SDL_UnlockTexture(screen_tex);
 
     SDL_Rect dest;
     dest.x = 10;
     dest.y = 10;
     dest.w = 64*5;
     dest.h = 32*5;
-    SDL_RenderCopy(renderer, screen, NULL, &dest);
+    SDL_RenderCopy(renderer, screen_tex, NULL, &dest);
 
     /* draw border */
     dest.x -= 1;
@@ -198,114 +241,82 @@ render_screen(void) {
 }
 
 void
-render_regs(void) {
-#define REG_BUFFER_SIZE 255
-    static char buffer[REG_BUFFER_SIZE] = "";
+controls_window(mu_Context *ctx) {
+    if (mu_begin_window(ctx, "Controls", mu_rect(350, 10, 200, 80))) {
+        mu_layout_row(ctx, 3, (int[]){-1, -1, -1}, 0);
+        if (mu_button(ctx, "Run"))   { cpu_running = SDL_TRUE; }
+        if (mu_button(ctx, "Pause")) { cpu_running = SDL_FALSE; }
+        if (mu_button(ctx, "Step"))  { cycle(cpu); }
+        mu_end_window(ctx);
+    }
+}
 
-    snprintf(buffer, REG_BUFFER_SIZE,
+void
+regs_window(mu_Context *ctx) {
+    if (mu_begin_window(ctx, "Registers", mu_rect(350, 100, 430, 110))) {
+        static char buf[256];
+        mu_layout_row(ctx, 1, (int[]){-1}, 0);
+        snprintf(buf, sizeof(buf),
             "v0=$%02x v1=$%02x v2=$%02x v3=$%02x v4=$%02x v5=$%02x v6=$%02x v7=$%02x",
-            cpu->v[0] , cpu->v[1] , cpu->v[2] , cpu->v[3] ,
-            cpu->v[4] , cpu->v[5] , cpu->v[6] , cpu->v[7]);
-    render_text(font, buffer, &forecol, 345, 15);
-
-    snprintf(buffer, REG_BUFFER_SIZE,
+            cpu->v[0], cpu->v[1], cpu->v[2], cpu->v[3],
+            cpu->v[4], cpu->v[5], cpu->v[6], cpu->v[7]);
+        mu_label(ctx, buf);
+        snprintf(buf, sizeof(buf),
             "v8=$%02x v9=$%02x va=$%02x vb=$%02x vc=$%02x vd=$%02x ve=$%02x vf=$%02x",
-            cpu->v[8] , cpu->v[9] , cpu->v[0xa] , cpu->v[0xb],
-            cpu->v[0xc] , cpu->v[0xd] , cpu->v[0xe] , cpu->v[0xf]);
-    render_text(font, buffer, &forecol, 345, 40);
-
-    snprintf(buffer, REG_BUFFER_SIZE,
-        "sp=$%03x pc=$%03x i=$%03x",
-        cpu->stack_pointer, cpu->program_counter, cpu->i);
-    render_text(font, buffer, &forecol, 345, 65);
-}
-
-void
-render_dis(void) {
-#define DIS_BUFFER_SIZE 255
-    static char buffer[DIS_BUFFER_SIZE] = "";
-    static char dis_buffer[DIS_BUFFER_SIZE] = "";
-    int x = 345;
-    int y = 200;
-    u16 op = 0;
-    u16 pc = cpu->program_counter;
-
-    snprintf(buffer, DIS_BUFFER_SIZE, "addr hex  op");
-    render_text(font, buffer, &forecol, x, y);
-    y += LINE_STEP;
-
-    snprintf(buffer, DIS_BUFFER_SIZE, "==== ==== ====");
-    render_text(font, buffer, &forecol, x, y);
-    y += LINE_STEP;
-
-    for (int i = 0; i < 20; i += 1, y += LINE_STEP, pc += 2) {
-        dis(cpu, pc, dis_buffer, DIS_BUFFER_SIZE);
-        op = peek16(cpu, pc);
-        snprintf(buffer, DIS_BUFFER_SIZE, "%04x %04x %s", pc, op, dis_buffer);
-        render_text(font, buffer, &forecol, x, y);
-    }
-}
-
-
-void
-render_memory(void) {
-#define MEMORY_BUFFER_SIZE 255
-    static char buffer[MEMORY_BUFFER_SIZE] = "";
-    int x = 10;
-    int y = 200;
-    u16 pc = cpu->i;
-    u8 b0 = 0;
-    u8 b1 = 0;
-    u8 b2 = 0;
-    u8 b3 = 0;
-    u8 b4 = 0;
-    u8 b5 = 0;
-    u8 b6 = 0;
-    u8 b7 = 0;
-    static char s[9] = "........";
-
-    snprintf(buffer, MEMORY_BUFFER_SIZE, "addr 0123 4567 89ab cdef ........");
-    render_text(font, buffer, &forecol, x, y);
-    y += LINE_STEP;
-
-    snprintf(buffer, MEMORY_BUFFER_SIZE, "==== ==== ==== ==== ==== ========");
-    render_text(font, buffer, &forecol, x, y);
-    y += LINE_STEP;
-
-    for (int i = 0; i < 20; i += 1, y += LINE_STEP) {
-#define X(n) b##n = cpu->memory[pc + n]; s[n] = b##n >= ' ' ? b##n : '.';
-        X(0)
-        X(1)
-        X(2)
-        X(3)
-        X(4)
-        X(5)
-        X(6)
-        X(7)
-#undef X
-        snprintf(buffer, MEMORY_BUFFER_SIZE, "%04x %02x%02x %02x%02x %02x%02x %02x%02x %s",
-                pc,
-                b0, b1, b2, b3, b4, b5, b6, b7,
-                s);
-        pc += 8;
-        render_text(font, buffer, &forecol, x, y);
+            cpu->v[8], cpu->v[9], cpu->v[10], cpu->v[11],
+            cpu->v[12], cpu->v[13], cpu->v[14], cpu->v[15]);
+        mu_label(ctx, buf);
+        snprintf(buf, sizeof(buf), "sp=$%03x pc=$%03x i=$%03x",
+            cpu->stack_pointer, cpu->program_counter, cpu->i);
+        mu_label(ctx, buf);
+        mu_end_window(ctx);
     }
 }
 
 void
-render_text(TTF_Font *font, char *buffer, SDL_Color *forecol, int x, int y) {
-    SDL_Surface *text = TTF_RenderText_Blended(font, buffer, *forecol);
-    if (!text) return;
-    SDL_Rect regs_rect;
-    regs_rect.x = x;
-    regs_rect.y = y;
-    regs_rect.w = text->w;
-    regs_rect.h = text->h;
-    SDL_Texture *regs_texture = SDL_CreateTextureFromSurface(renderer, text);
-    SDL_FreeSurface(text);
-    if (regs_texture) {
-        SDL_RenderCopy(renderer, regs_texture, NULL, &regs_rect);
-        SDL_DestroyTexture(regs_texture);
+dis_window(mu_Context *ctx) {
+    if (mu_begin_window(ctx, "Disassembly", mu_rect(350, 220, 430, 350))) {
+        static char buf[256];
+        static char dis_buf[256];
+        u16 pc = cpu->program_counter;
+        mu_layout_row(ctx, 1, (int[]){-1}, 0);
+        mu_label(ctx, "addr hex  op");
+        mu_label(ctx, "==== ==== ====");
+        for (int i = 0; i < 20; i++) {
+            dis(cpu, pc, dis_buf, sizeof(dis_buf));
+            u16 op = peek16(cpu, pc);
+            snprintf(buf, sizeof(buf), "%04x %04x %s", pc, op, dis_buf);
+            mu_label(ctx, buf);
+            pc += 2;
+        }
+        mu_end_window(ctx);
     }
 }
 
+void
+mem_window(mu_Context *ctx) {
+    if (mu_begin_window(ctx, "Memory", mu_rect(10, 200, 320, 370))) {
+        static char buf[256];
+        u16 pc = cpu->i;
+        mu_layout_row(ctx, 1, (int[]){-1}, 0);
+        mu_label(ctx, "addr 0123 4567 89ab cdef ........");
+        mu_label(ctx, "==== ==== ==== ==== ==== ========");
+        for (int i = 0; i < 16; i++) {
+            u8 b0 = cpu->memory[pc+0]; u8 b1 = cpu->memory[pc+1];
+            u8 b2 = cpu->memory[pc+2]; u8 b3 = cpu->memory[pc+3];
+            u8 b4 = cpu->memory[pc+4]; u8 b5 = cpu->memory[pc+5];
+            u8 b6 = cpu->memory[pc+6]; u8 b7 = cpu->memory[pc+7];
+            char s[9] = {
+                b0 >= ' ' ? b0 : '.', b1 >= ' ' ? b1 : '.',
+                b2 >= ' ' ? b2 : '.', b3 >= ' ' ? b3 : '.',
+                b4 >= ' ' ? b4 : '.', b5 >= ' ' ? b5 : '.',
+                b6 >= ' ' ? b6 : '.', b7 >= ' ' ? b7 : '.', '\0'
+            };
+            snprintf(buf, sizeof(buf), "%04x %02x%02x %02x%02x %02x%02x %02x%02x %s",
+                    pc, b0, b1, b2, b3, b4, b5, b6, b7, s);
+            mu_label(ctx, buf);
+            pc += 8;
+        }
+        mu_end_window(ctx);
+    }
+}

@@ -30,17 +30,7 @@ static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 
 
-void r_init(void) {
-  /* init SDL window */
-    window = SDL_CreateWindow(
-        "title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        width, height, SDL_WINDOW_OPENGL);
-
-    renderer = SDL_CreateRenderer(
-        window,
-        -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-
+static void init_texture(void) {
     texture = SDL_CreateTexture(
         renderer,
         SDL_PIXELFORMAT_ABGR8888,
@@ -59,6 +49,27 @@ void r_init(void) {
         SDL_free(ptr);
     }
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+}
+
+
+void r_init(void) {
+  /* init SDL window */
+    window = SDL_CreateWindow(
+        "title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        width, height, SDL_WINDOW_OPENGL);
+
+    renderer = SDL_CreateRenderer(
+        window,
+        -1,
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+
+    init_texture();
+}
+
+
+void r_init_ex(SDL_Renderer *r) {
+    renderer = r;
+    init_texture();
 }
 
 
@@ -195,7 +206,8 @@ void r_clear(mu_Color clr) {
 }
 
 
-void r_present(void) {
+void r_render(void) {
+    if (buf_idx == 0) { return; }
     float *vert_ptr = (float*)vert_buf;
     float *tex_ptr = (float*)tex_buf;
     SDL_RenderGeometryRaw(renderer, texture,
@@ -205,7 +217,12 @@ void r_present(void) {
           buf_idx,
           index_buf, index_idx,
           sizeof(index_buf[0]));
-    SDL_RenderPresent(renderer);
     flush();
+}
+
+
+void r_present(void) {
+    r_render();
+    SDL_RenderPresent(renderer);
 }
 

@@ -15,7 +15,7 @@ Toolchain: **tcc** (Tiny C Compiler) + **SDL2** 2.24.1 + **SDL_ttf** 2.20.1 on W
 
 - `src/cpu.h` — CPU emulation is **header-only** with inline implementations (init, cycle, draw, dis, load). Include it directly.
 - `src/cli.c` — Terminal frontend, prints screen buffer as ASCII.
-- `src/gui.c` — SDL2 + SDL_ttf debugger showing screen, regs, disassembly, memory.
+- `src/gui.c` — SDL2 + microui debugger showing screen, regs, disassembly, memory.
 - `src/main.c` + `src/renderer.c` — microui demo UI. **Not connected to CHIP-8 emulation.**
 - `vendors/microui/` — vendor copy of rxi/microui.
 
@@ -24,7 +24,6 @@ Toolchain: **tcc** (Tiny C Compiler) + **SDL2** 2.24.1 + **SDL_ttf** 2.20.1 on W
 - `cpu.h` is a header with function definitions, not a proper `.c`/`.h` split. Do not try to compile it separately.
 - `_STDINT_H_` is defined before `#include <SDL.h>` to prevent SDL's stdint shim from conflicting with tcc. Keep this pattern in SDL files.
 - Binaries (`*.exe`) in `bin/` and repo root should **not** be committed. `.gitignore` already excludes `*.exe`.
-- `gui.c` hardcodes font path: `c:\windows\fonts\consola.ttf`.
 - ROMs load at `0x200`; font data is defined in `cpu.h` but **not loaded into memory**.
 
 ## Known incomplete

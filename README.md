@@ -26,7 +26,7 @@ make run-demo  # microui demo (not connected to emulation)
 |------|---------|
 | `src/cpu.h` | CPU emulation (header-only: init, cycle, draw, dis, load) |
 | `src/cli.c` | Terminal frontend, prints screen buffer as ASCII |
-| `src/gui.c` | SDL2 + SDL_ttf debugger with screen, regs, disassembly, memory |
+| `src/gui.c` | SDL2 + microui debugger with screen, regs, disassembly, memory |
 | `src/main.c` | microui demo UI |
 | `src/renderer.c` | SDL2 rendering backend for microui |
 | `vendors/microui/` | vendor copy of rxi/microui |
