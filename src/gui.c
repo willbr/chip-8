@@ -24,6 +24,7 @@ mu_Context *ctx = NULL;
 int win_w = 800;
 int win_h = 600;
 static int roms_window_open = 0;
+static int roms_window_just_opened = 0;
 static char rom_filter[64] = "";
 
 static int str_contains_ci(const char *haystack, const char *needle) {
@@ -307,7 +308,10 @@ controls_window(mu_Context *ctx) {
         if (mu_button(ctx, "Run"))   { cpu_running = SDL_TRUE; }
         if (mu_button(ctx, "Pause")) { cpu_running = SDL_FALSE; }
         if (mu_button(ctx, "Step"))  { cycle(cpu); }
-        if (mu_button(ctx, "ROM"))   { roms_window_open = !roms_window_open; }
+        if (mu_button(ctx, "ROM")) {
+            if (!roms_window_open) roms_window_just_opened = 1;
+            roms_window_open = !roms_window_open;
+        }
         mu_end_window(ctx);
     }
 }
@@ -403,8 +407,11 @@ roms_window(mu_Context *ctx) {
     if (h > 400) h = 400;
     if (mu_begin_window(ctx, "ROMs", mu_rect(340, 100, 300, h))) {
         mu_layout_row(ctx, 1, (int[]){-1}, 0);
-        mu_set_focus(ctx, mu_get_id(ctx, rom_filter, sizeof(rom_filter)));
         mu_textbox(ctx, rom_filter, sizeof(rom_filter));
+        if (roms_window_just_opened) {
+            mu_set_focus(ctx, ctx->last_id);
+            roms_window_just_opened = 0;
+        }
         for (int i = 0; i < rom_count; i++) {
             if (rom_filter[0] && !str_contains_ci(rom_names[i], rom_filter)) continue;
             if (mu_button(ctx, rom_names[i])) {
