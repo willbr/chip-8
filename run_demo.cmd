@@ -5,7 +5,7 @@ set CC=tcc
 
 reg Query "HKLM\Hardware\Description\System\CentralProcessor\0" | find /i "x86" > NUL && (set ARCH=x86) || (set ARCH=x64)
 
-set SDL=.\SDL2-2.24.1
+set SDL=.\vendors\SDL2-2.24.1
 rem set SDL=..\tinyc.games\_win\SDL2-2.0.5
 rem set TTF=..\_win\SDL2_ttf-2.0.14
 
