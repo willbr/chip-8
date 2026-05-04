@@ -20,6 +20,9 @@ int cycles_per_frame = 10000;
 
 mu_Context *ctx = NULL;
 
+int win_w = 800;
+int win_h = 600;
+
 void render_screen(void);
 void controls_window(mu_Context *ctx);
 void regs_window(mu_Context *ctx);
@@ -65,8 +68,8 @@ main()
             "CHIP-8",
             SDL_WINDOWPOS_CENTERED,
             SDL_WINDOWPOS_CENTERED,
-            800, 600,
-            SDL_WINDOW_OPENGL);
+            win_w, win_h,
+            SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (window == NULL) {
         fprintf(stderr, "create window failed: %s\n", SDL_GetError());
         return 1;
@@ -111,6 +114,13 @@ main()
             switch (e.type) {
                 case SDL_QUIT:
                     gui_running = SDL_FALSE;
+                    break;
+
+                case SDL_WINDOWEVENT:
+                    if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                        win_w = e.window.data1;
+                        win_h = e.window.data2;
+                    }
                     break;
 
                 case SDL_MOUSEMOTION:
@@ -242,7 +252,9 @@ render_screen(void) {
 
 void
 controls_window(mu_Context *ctx) {
-    if (mu_begin_window(ctx, "Controls", mu_rect(350, 10, 200, 80))) {
+    int w = win_w - 350;
+    if (w < 200) w = 200;
+    if (mu_begin_window(ctx, "Controls", mu_rect(340, 10, w, 80))) {
         mu_layout_row(ctx, 3, (int[]){-1, -1, -1}, 0);
         if (mu_button(ctx, "Run"))   { cpu_running = SDL_TRUE; }
         if (mu_button(ctx, "Pause")) { cpu_running = SDL_FALSE; }
@@ -253,7 +265,9 @@ controls_window(mu_Context *ctx) {
 
 void
 regs_window(mu_Context *ctx) {
-    if (mu_begin_window(ctx, "Registers", mu_rect(350, 100, 430, 110))) {
+    int w = win_w - 350;
+    if (w < 200) w = 200;
+    if (mu_begin_window(ctx, "Registers", mu_rect(340, 100, w, 110))) {
         static char buf[256];
         mu_layout_row(ctx, 1, (int[]){-1}, 0);
         snprintf(buf, sizeof(buf),
@@ -275,7 +289,11 @@ regs_window(mu_Context *ctx) {
 
 void
 dis_window(mu_Context *ctx) {
-    if (mu_begin_window(ctx, "Disassembly", mu_rect(350, 220, 430, 350))) {
+    int w = win_w - 350;
+    int h = win_h - 240;
+    if (w < 200) w = 200;
+    if (h < 100) h = 100;
+    if (mu_begin_window(ctx, "Disassembly", mu_rect(340, 220, w, h))) {
         static char buf[256];
         static char dis_buf[256];
         u16 pc = cpu->program_counter;
@@ -295,7 +313,9 @@ dis_window(mu_Context *ctx) {
 
 void
 mem_window(mu_Context *ctx) {
-    if (mu_begin_window(ctx, "Memory", mu_rect(10, 200, 320, 370))) {
+    int h = win_h - 220;
+    if (h < 100) h = 100;
+    if (mu_begin_window(ctx, "Memory", mu_rect(10, 200, 320, h))) {
         static char buf[256];
         u16 pc = cpu->i;
         mu_layout_row(ctx, 1, (int[]){-1}, 0);
