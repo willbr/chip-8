@@ -23,12 +23,14 @@ mu_Context *ctx = NULL;
 
 int win_w = 800;
 int win_h = 600;
+static int roms_window_open = 0;
 
 void render_screen(void);
 void controls_window(mu_Context *ctx);
 void regs_window(mu_Context *ctx);
 void dis_window(mu_Context *ctx);
 void mem_window(mu_Context *ctx);
+void roms_window(mu_Context *ctx);
 
 #define MAX_ROMS 256
 static char rom_files[MAX_ROMS][256];
@@ -207,6 +209,7 @@ main()
         regs_window(ctx);
         dis_window(ctx);
         mem_window(ctx);
+        if (roms_window_open) roms_window(ctx);
         mu_end(ctx);
 
         r_clear(mu_color(20, 20, 20, 255));
@@ -292,23 +295,7 @@ controls_window(mu_Context *ctx) {
         if (mu_button(ctx, "Run"))   { cpu_running = SDL_TRUE; }
         if (mu_button(ctx, "Pause")) { cpu_running = SDL_FALSE; }
         if (mu_button(ctx, "Step"))  { cycle(cpu); }
-        if (mu_button(ctx, "ROM"))   { mu_open_popup(ctx, "Load ROM"); }
-        if (mu_begin_popup(ctx, "Load ROM")) {
-            int ph = 20 + rom_count * 25;
-            if (ph > 300) ph = 300;
-            mu_layout_row(ctx, 1, (int[]){200}, 0);
-            mu_begin_panel(ctx, "rom-list");
-            mu_layout_row(ctx, 1, (int[]){-1}, 0);
-            for (int i = 0; i < rom_count; i++) {
-                if (mu_button(ctx, rom_names[i])) {
-                    init(cpu);
-                    load(cpu, rom_files[i]);
-                    cpu_running = SDL_FALSE;
-                }
-            }
-            mu_end_panel(ctx);
-            mu_end_popup(ctx);
-        }
+        if (mu_button(ctx, "ROM"))   { roms_window_open = !roms_window_open; }
         mu_end_window(ctx);
     }
 }
@@ -398,4 +385,20 @@ mem_window(mu_Context *ctx) {
     }
 }
 
+void
+roms_window(mu_Context *ctx) {
+    int h = 20 + rom_count * 25;
+    if (h > 400) h = 400;
+    if (mu_begin_window(ctx, "ROMs", mu_rect(340, 100, 300, h))) {
+        mu_layout_row(ctx, 1, (int[]){-1}, 0);
+        for (int i = 0; i < rom_count; i++) {
+            if (mu_button(ctx, rom_names[i])) {
+                init(cpu);
+                load(cpu, rom_files[i]);
+                cpu_running = SDL_FALSE;
+            }
+        }
+        mu_end_window(ctx);
+    }
+}
 
