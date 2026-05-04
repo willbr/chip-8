@@ -255,7 +255,9 @@ controls_window(mu_Context *ctx) {
     int w = win_w - 350;
     if (w < 200) w = 200;
     if (mu_begin_window(ctx, "Controls", mu_rect(340, 10, w, 80))) {
-        mu_layout_row(ctx, 3, (int[]){-1, -1, -1}, 0);
+        int bw = (w - 40) / 3;
+        if (bw < 60) bw = 60;
+        mu_layout_row(ctx, 3, (int[]){bw, bw, bw}, 0);
         if (mu_button(ctx, "Run"))   { cpu_running = SDL_TRUE; }
         if (mu_button(ctx, "Pause")) { cpu_running = SDL_FALSE; }
         if (mu_button(ctx, "Step"))  { cycle(cpu); }
