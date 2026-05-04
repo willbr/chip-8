@@ -46,3 +46,15 @@ make run-demo  # microui demo (not connected to emulation)
 * [ ] Font data loaded into memory
 * [ ] Hex keyboard handling
 * [ ] Test rom https://github.com/corax89/chip8-test-rom
+* [ ] MCP server
+* [ ] Move emulation to a separate library for hot reloading
+* [ ] Hot reload ROM via IPC or TCP
+
+## References
+
+- [Wikipedia — CHIP-8](https://en.wikipedia.org/wiki/CHIP-8)
+- [XXIIVV — CHIP-8](https://wiki.xxiivv.com/site/chip8.html)
+- [Cowgod's Chip-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)
+- [rxi/microui](https://github.com/rxi/microui)
+- [dmatlack/chip8 ROMs](https://github.com/dmatlack/chip8/tree/master/roms/games)
+- [loktar00/chip8 ROMs](https://github.com/loktar00/chip8/tree/master/roms)
