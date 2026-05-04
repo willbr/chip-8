@@ -36,6 +36,8 @@ make mcp-server   # MCP server (stdio transport)
 
 ## Todo
 
+### Core emulation
+
 * [x] SDL
 * [x] `SDL_ttf`
 * [x] Basic opcode execution (`0x1NNN`, `0x6XNN`, `0x7XNN`, `0xANNN`, `0xDNNN`, `0x00E0`)
@@ -49,14 +51,63 @@ make mcp-server   # MCP server (stdio transport)
 * [x] Font data loaded into memory
 * [x] Hex keyboard handling
 * [x] Test rom https://github.com/corax89/chip8-test-rom
+* [ ] Quirk flags (COSMAC VIP vs SCHIP behaviour for `8XY6`/`8XYE`, `FX55`/`FX65`)
+* [ ] SCHIP / Super-CHIP support (128x64 hi-res, extended opcodes `00FD`, `00FE`, `FX75`, `FX85`)
+
+### Frontends
+
+* [x] CLI ASCII output
+* [x] SDL2 debugger GUI
 * [x] MCP server
+* [ ] Interactive CLI (REPL: `s`tep, `r`un, `d`ump, `b`reak)
+* [ ] Sound beep in CLI
+
+### Debugger / GUI improvements
+
+* [x] Screen rendering
+* [x] Register window
+* [x] Disassembly window
+* [x] Memory window
+* [x] Stack window
+* [x] On-screen keypad
+* [x] ROM browser
+* [ ] **Breakpoints** (pause at address)
+* [ ] **Scrollable memory viewer** (full 0x000-0xFFF hex dump, not just 128 bytes at `I`)
+* [ ] **Scrollable disassembly with PC highlight**
+* [ ] **Configurable clock speed** (slider instead of hard-coded 1000 Hz)
+* [ ] **Instruction trace log** (ring buffer of last N instructions with register values)
+* [ ] **Save / load CPU state** (snapshot serialization)
+
+### MCP server
+
+* [x] Basic commands (INIT, LOAD, STEP, RUN, REGS, MEM, SCREEN, DIS, STATE)
+* [ ] `KEY` command (inject keypresses so interactive ROMs work)
+* [ ] `TICK` command (decrement delay/sound timers independently of cycles)
+* [ ] `BREAKPOINT` commands (set/clear/list)
+
+### Tooling
+
 * [ ] Assembler & Linker
 * [ ] REPL assembler inside the debugger
-* [ ] basic pixel editor in the debugger
+* [ ] Basic pixel / sprite editor in the debugger
 * [ ] pico8 lua syntax language that compiles to assembly
-* [ ] 
-* [ ] 
-* [ ] 
+
+## Known issues
+
+* `src/cpu.h`
+  * `load()` leaks `FILE*` (no `fclose`)
+  * `font_data` and `rng_seeded` lack `static` (ODR risk if header included in multiple TUs)
+  * Missing `#include <stdio.h>` and include guard
+  * `dis()` declares variables after statements inside `case 0xd000:` without braces (C99 portability)
+  * `dis()` format string typo: `%0x` should be `%03x`
+  * `load()` ignores `fread` return value
+* `src/gui.c`
+  * `keys_window()` clears `mouse_key` unconditionally every frame, causing held-mouse flicker
+  * `render_screen()` writes RGBA sequentially to `SDL_PIXELFORMAT_RGBA8888`; on little-endian this is interpreted as ABGR. Using `SDL_PIXELFORMAT_ABGR8888` would match the write order.
+* `src/mcp_cpu.c`
+  * `RUN` / `STEP` never tick timers, so delay/sound timers don't count down via MCP
+  * No key-input protocol, so interactive ROMs are untestable through MCP
+  * `load()` calls `die()` on failure which kills the process instead of returning JSON error
 
 ## References
 
