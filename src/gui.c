@@ -396,6 +396,7 @@ roms_window(mu_Context *ctx) {
                 init(cpu);
                 load(cpu, rom_files[i]);
                 cpu_running = SDL_FALSE;
+                roms_window_open = 0;
             }
         }
         mu_end_window(ctx);
