@@ -26,6 +26,7 @@ int win_h = 600;
 static int roms_window_open = 0;
 static int roms_window_just_opened = 0;
 static char rom_filter[64] = "";
+static mu_Id rom_filter_id = 0;
 
 SDL_AudioDeviceID audio_device = 0;
 
@@ -264,27 +265,30 @@ main()
                 case SDL_KEYDOWN: {
                     int c = key_map[e.key.keysym.sym & 0xff];
                     if (c) { mu_input_keydown(ctx, c); }
-                    int chip8_key = map_key(e.key.keysym.sym);
-                    if (chip8_key >= 0) {
-                        cpu->keys[chip8_key] = 1;
-                        if (cpu->waiting_for_key) {
-                            cpu->v[cpu->key_register] = chip8_key;
-                            cpu->waiting_for_key = 0;
+                    int typing_in_filter = roms_window_open && ctx->focus == rom_filter_id;
+                    if (!typing_in_filter) {
+                        int chip8_key = map_key(e.key.keysym.sym);
+                        if (chip8_key >= 0) {
+                            cpu->keys[chip8_key] = 1;
+                            if (cpu->waiting_for_key) {
+                                cpu->v[cpu->key_register] = chip8_key;
+                                cpu->waiting_for_key = 0;
+                            }
                         }
-                    }
-                    switch (e.key.keysym.sym) {
-                        case SDLK_ESCAPE:
-                            cpu_running = SDL_FALSE;
-                            break;
-                        case SDLK_q:
-                            gui_running = SDL_FALSE;
-                            break;
-                        case SDLK_c:
-                            cpu_running = SDL_TRUE;
-                            break;
-                        case SDLK_j:
-                            cycle(cpu);
-                            break;
+                        switch (e.key.keysym.sym) {
+                            case SDLK_ESCAPE:
+                                cpu_running = SDL_FALSE;
+                                break;
+                            case SDLK_q:
+                                gui_running = SDL_FALSE;
+                                break;
+                            case SDLK_c:
+                                cpu_running = SDL_TRUE;
+                                break;
+                            case SDLK_j:
+                                cycle(cpu);
+                                break;
+                        }
                     }
                     break;
                 }
@@ -494,6 +498,7 @@ roms_window(mu_Context *ctx) {
     if (mu_begin_window(ctx, "ROMs", mu_rect(340, 100, 300, h))) {
         mu_layout_row(ctx, 1, (int[]){-1}, 0);
         mu_textbox(ctx, rom_filter, sizeof(rom_filter));
+        rom_filter_id = ctx->last_id;
         if (roms_window_just_opened) {
             mu_set_focus(ctx, ctx->last_id);
             roms_window_just_opened = 0;
