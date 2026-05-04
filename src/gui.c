@@ -296,17 +296,19 @@ dis_window(mu_Context *ctx) {
     if (w < 200) w = 200;
     if (h < 100) h = 100;
     if (mu_begin_window(ctx, "Disassembly", mu_rect(340, 220, w, h))) {
-        static char buf[256];
-        static char dis_buf[256];
+        static char b1[64], b2[64], b3[256];
         u16 pc = cpu->program_counter;
-        mu_layout_row(ctx, 1, (int[]){-1}, 0);
-        mu_label(ctx, "addr hex  op");
-        mu_label(ctx, "==== ==== ====");
+        mu_layout_row(ctx, 3, (int[]){40, 45, -1}, 0);
+        mu_label(ctx, "addr"); mu_label(ctx, "hex"); mu_label(ctx, "op");
+        mu_label(ctx, "===="); mu_label(ctx, "===="); mu_label(ctx, "========");
         for (int i = 0; i < 20; i++) {
-            dis(cpu, pc, dis_buf, sizeof(dis_buf));
+            dis(cpu, pc, b3, sizeof(b3));
             u16 op = peek16(cpu, pc);
-            snprintf(buf, sizeof(buf), "%04x %04x %s", pc, op, dis_buf);
-            mu_label(ctx, buf);
+            snprintf(b1, sizeof(b1), "%04x", pc);
+            snprintf(b2, sizeof(b2), "%04x", op);
+            mu_label(ctx, b1);
+            mu_label(ctx, b2);
+            mu_label(ctx, b3);
             pc += 2;
         }
         mu_end_window(ctx);
@@ -318,25 +320,30 @@ mem_window(mu_Context *ctx) {
     int h = win_h - 220;
     if (h < 100) h = 100;
     if (mu_begin_window(ctx, "Memory", mu_rect(10, 200, 320, h))) {
-        static char buf[256];
+        static char b1[32], b2[32], b3[32], b4[32], b5[32], b6[32];
         u16 pc = cpu->i;
-        mu_layout_row(ctx, 1, (int[]){-1}, 0);
-        mu_label(ctx, "addr 0123 4567 89ab cdef ........");
-        mu_label(ctx, "==== ==== ==== ==== ==== ========");
+        mu_layout_row(ctx, 6, (int[]){40, 40, 40, 40, 40, -1}, 0);
+        mu_label(ctx, "addr"); mu_label(ctx, "0123"); mu_label(ctx, "4567");
+        mu_label(ctx, "89ab"); mu_label(ctx, "cdef"); mu_label(ctx, "........");
+        mu_label(ctx, "===="); mu_label(ctx, "===="); mu_label(ctx, "====");
+        mu_label(ctx, "===="); mu_label(ctx, "===="); mu_label(ctx, "========");
         for (int i = 0; i < 16; i++) {
-            u8 b0 = cpu->memory[pc+0]; u8 b1 = cpu->memory[pc+1];
-            u8 b2 = cpu->memory[pc+2]; u8 b3 = cpu->memory[pc+3];
-            u8 b4 = cpu->memory[pc+4]; u8 b5 = cpu->memory[pc+5];
-            u8 b6 = cpu->memory[pc+6]; u8 b7 = cpu->memory[pc+7];
-            char s[9] = {
-                b0 >= ' ' ? b0 : '.', b1 >= ' ' ? b1 : '.',
-                b2 >= ' ' ? b2 : '.', b3 >= ' ' ? b3 : '.',
-                b4 >= ' ' ? b4 : '.', b5 >= ' ' ? b5 : '.',
-                b6 >= ' ' ? b6 : '.', b7 >= ' ' ? b7 : '.', '\0'
-            };
-            snprintf(buf, sizeof(buf), "%04x %02x%02x %02x%02x %02x%02x %02x%02x %s",
-                    pc, b0, b1, b2, b3, b4, b5, b6, b7, s);
-            mu_label(ctx, buf);
+            u8 m0 = cpu->memory[pc+0]; u8 m1 = cpu->memory[pc+1];
+            u8 m2 = cpu->memory[pc+2]; u8 m3 = cpu->memory[pc+3];
+            u8 m4 = cpu->memory[pc+4]; u8 m5 = cpu->memory[pc+5];
+            u8 m6 = cpu->memory[pc+6]; u8 m7 = cpu->memory[pc+7];
+            snprintf(b1, sizeof(b1), "%04x", pc);
+            snprintf(b2, sizeof(b2), "%02x%02x", m0, m1);
+            snprintf(b3, sizeof(b3), "%02x%02x", m2, m3);
+            snprintf(b4, sizeof(b4), "%02x%02x", m4, m5);
+            snprintf(b5, sizeof(b5), "%02x%02x", m6, m7);
+            snprintf(b6, sizeof(b6), "%c%c%c%c%c%c%c%c",
+                m0 >= ' ' ? m0 : '.', m1 >= ' ' ? m1 : '.',
+                m2 >= ' ' ? m2 : '.', m3 >= ' ' ? m3 : '.',
+                m4 >= ' ' ? m4 : '.', m5 >= ' ' ? m5 : '.',
+                m6 >= ' ' ? m6 : '.', m7 >= ' ' ? m7 : '.');
+            mu_label(ctx, b1); mu_label(ctx, b2); mu_label(ctx, b3);
+            mu_label(ctx, b4); mu_label(ctx, b5); mu_label(ctx, b6);
             pc += 8;
         }
         mu_end_window(ctx);
