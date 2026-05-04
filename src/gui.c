@@ -302,7 +302,7 @@ controls_window(mu_Context *ctx) {
     int w = win_w - 350;
     if (w < 200) w = 200;
     if (mu_begin_window(ctx, "Controls", mu_rect(340, 10, w, 80))) {
-        int bw = (w - 50) / 4;
+        int bw = (mu_get_current_container(ctx)->body.w - 40) / 4;
         if (bw < 50) bw = 50;
         mu_layout_row(ctx, 4, (int[]){bw, bw, bw, bw}, 0);
         if (mu_button(ctx, "Run"))   { cpu_running = SDL_TRUE; }
