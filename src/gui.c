@@ -24,6 +24,7 @@ mu_Context *ctx = NULL;
 int win_w = 800;
 int win_h = 600;
 static int roms_window_open = 0;
+static char rom_filter[64] = "";
 
 void render_screen(void);
 void controls_window(mu_Context *ctx);
@@ -387,11 +388,13 @@ mem_window(mu_Context *ctx) {
 
 void
 roms_window(mu_Context *ctx) {
-    int h = 20 + rom_count * 25;
+    int h = 50 + rom_count * 25;
     if (h > 400) h = 400;
     if (mu_begin_window(ctx, "ROMs", mu_rect(340, 100, 300, h))) {
         mu_layout_row(ctx, 1, (int[]){-1}, 0);
+        mu_textbox(ctx, rom_filter, sizeof(rom_filter));
         for (int i = 0; i < rom_count; i++) {
+            if (rom_filter[0] && !strstr(rom_names[i], rom_filter)) continue;
             if (mu_button(ctx, rom_names[i])) {
                 init(cpu);
                 load(cpu, rom_files[i]);
