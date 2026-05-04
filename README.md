@@ -29,7 +29,7 @@ make run-demo  # microui demo (not connected to emulation)
 | `src/gui.c` | SDL2 + SDL_ttf debugger with screen, regs, disassembly, memory |
 | `src/main.c` | microui demo UI |
 | `src/renderer.c` | SDL2 rendering backend for microui |
-| `microui/` | git submodule (rxi/microui) |
+| `vendors/microui/` | vendor copy of rxi/microui |
 
 ## Todo
 

@@ -17,7 +17,7 @@ Toolchain: **tcc** (Tiny C Compiler) + **SDL2** 2.24.1 + **SDL_ttf** 2.20.1 on W
 - `src/cli.c` — Terminal frontend, prints screen buffer as ASCII.
 - `src/gui.c` — SDL2 + SDL_ttf debugger showing screen, regs, disassembly, memory.
 - `src/main.c` + `src/renderer.c` — microui demo UI. **Not connected to CHIP-8 emulation.**
-- `microui/` — git submodule (rxi/microui).
+- `vendors/microui/` — vendor copy of rxi/microui.
 
 ## Important conventions
 

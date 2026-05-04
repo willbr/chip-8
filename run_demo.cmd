@@ -13,5 +13,5 @@ set PATH=%PATH%;%SDL%\lib\%ARCH%
 rem set PATH=%PATH%;%TTF%\lib\%ARCH%
 
 rem %CC% -DSDL_MAIN_HANDLED -I%SDL%\include -I%TTF%\include -L%SDL%\lib\%ARCH% -L%TTF%\lib\%ARCH% -lSDL2 -lSDL2_ttf -run src\gui.c
-%CC% -DSDL_MAIN_HANDLED -I%SDL%\include -L%SDL%\lib\%ARCH%  -lSDL2 -Imicroui\src microui\src\microui.c src\renderer.c -run src\main.c -Wall
+%CC% -DSDL_MAIN_HANDLED -I%SDL%\include -L%SDL%\lib\%ARCH%  -lSDL2 -Ivendors\microui\src vendors\microui\src\microui.c src\renderer.c -run src\main.c -Wall
 
