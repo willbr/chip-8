@@ -5,6 +5,7 @@
 #include <stdint.h>
 #define _STDINT_H_
 
+#include <windows.h>
 #include <SDL.h>
 #include "renderer.h"
 #include "microui.h"
@@ -28,6 +29,40 @@ void controls_window(mu_Context *ctx);
 void regs_window(mu_Context *ctx);
 void dis_window(mu_Context *ctx);
 void mem_window(mu_Context *ctx);
+void roms_popup(mu_Context *ctx);
+
+#define MAX_ROMS 256
+static char rom_files[MAX_ROMS][256];
+static int rom_count = 0;
+
+static void add_rom(const char *path) {
+    if (rom_count >= MAX_ROMS) return;
+    strncpy(rom_files[rom_count], path, 255);
+    rom_files[rom_count][255] = '\0';
+    rom_count++;
+}
+
+static void scan_dir(const char *dir) {
+    char pattern[256];
+    WIN32_FIND_DATAA fd;
+    HANDLE h;
+    snprintf(pattern, sizeof(pattern), "%s\\*.ch8", dir);
+    h = FindFirstFileA(pattern, &fd);
+    if (h == INVALID_HANDLE_VALUE) return;
+    do {
+        if (rom_count >= MAX_ROMS) break;
+        snprintf(rom_files[rom_count], 256, "%s\\%s", dir, fd.cFileName);
+        rom_count++;
+    } while (FindNextFileA(h, &fd));
+    FindClose(h);
+}
+
+static void scan_roms(void) {
+    rom_count = 0;
+    scan_dir("roms");
+    scan_dir("roms\\dmatlack");
+    scan_dir("roms\\loktar00");
+}
 
 static int text_width(mu_Font font, const char *text, int len) {
     if (len == -1) { len = strlen(text); }
@@ -90,6 +125,7 @@ main()
 
     cpu = malloc(sizeof(struct chip8_cpu));
     init(cpu);
+    scan_roms();
     load(cpu, "./roms/IBM Logo.ch8");
 
     screen_tex = SDL_CreateTexture(
@@ -176,6 +212,7 @@ main()
         regs_window(ctx);
         dis_window(ctx);
         mem_window(ctx);
+        roms_popup(ctx);
         mu_end(ctx);
 
         r_clear(mu_color(20, 20, 20, 255));
@@ -255,12 +292,13 @@ controls_window(mu_Context *ctx) {
     int w = win_w - 350;
     if (w < 200) w = 200;
     if (mu_begin_window(ctx, "Controls", mu_rect(340, 10, w, 80))) {
-        int bw = (w - 40) / 3;
-        if (bw < 60) bw = 60;
-        mu_layout_row(ctx, 3, (int[]){bw, bw, bw}, 0);
+        int bw = (w - 50) / 4;
+        if (bw < 50) bw = 50;
+        mu_layout_row(ctx, 4, (int[]){bw, bw, bw, bw}, 0);
         if (mu_button(ctx, "Run"))   { cpu_running = SDL_TRUE; }
         if (mu_button(ctx, "Pause")) { cpu_running = SDL_FALSE; }
         if (mu_button(ctx, "Step"))  { cycle(cpu); }
+        if (mu_button(ctx, "ROM"))   { mu_open_popup(ctx, "Load ROM"); }
         mu_end_window(ctx);
     }
 }
@@ -347,5 +385,23 @@ mem_window(mu_Context *ctx) {
             pc += 8;
         }
         mu_end_window(ctx);
+    }
+}
+
+void
+roms_popup(mu_Context *ctx) {
+    if (mu_begin_popup(ctx, "Load ROM")) {
+        mu_layout_row(ctx, 1, (int[]){-1}, 0);
+        mu_begin_panel(ctx, "rom-list");
+        mu_layout_row(ctx, 1, (int[]){-1}, 0);
+        for (int i = 0; i < rom_count; i++) {
+            if (mu_button(ctx, rom_files[i])) {
+                init(cpu);
+                load(cpu, rom_files[i]);
+                cpu_running = SDL_FALSE;
+            }
+        }
+        mu_end_panel(ctx);
+        mu_end_popup(ctx);
     }
 }
