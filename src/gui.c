@@ -294,17 +294,18 @@ render_memory(void) {
 
 void
 render_text(TTF_Font *font, char *buffer, SDL_Color *forecol, int x, int y) {
-    static SDL_Surface *text = NULL;
-    static SDL_Rect regs_rect;
-    static SDL_Texture *regs_texture = NULL;
-
-    text = TTF_RenderText_Blended(font, buffer, *forecol);
+    SDL_Surface *text = TTF_RenderText_Blended(font, buffer, *forecol);
+    if (!text) return;
+    SDL_Rect regs_rect;
     regs_rect.x = x;
     regs_rect.y = y;
     regs_rect.w = text->w;
     regs_rect.h = text->h;
-    regs_texture = SDL_CreateTextureFromSurface(renderer, text);
+    SDL_Texture *regs_texture = SDL_CreateTextureFromSurface(renderer, text);
     SDL_FreeSurface(text);
-    SDL_RenderCopy(renderer, regs_texture, NULL, &regs_rect);
+    if (regs_texture) {
+        SDL_RenderCopy(renderer, regs_texture, NULL, &regs_rect);
+        SDL_DestroyTexture(regs_texture);
+    }
 }
 

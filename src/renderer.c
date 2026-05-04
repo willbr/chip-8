@@ -190,7 +190,7 @@ void r_set_clip_rect(mu_Rect rect) {
 
 void r_clear(mu_Color clr) {
     flush();
-    SDL_SetRenderDrawColor(renderer, 255, 200, 180, 255);
+    SDL_SetRenderDrawColor(renderer, clr.r, clr.g, clr.b, clr.a);
     SDL_RenderClear(renderer);
 }
 

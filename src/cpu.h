@@ -12,8 +12,8 @@ typedef unsigned int   u32;
 typedef unsigned short u16;
 typedef unsigned char  u8;
 
-#define false 0;
-#define true (!0);
+#define false 0
+#define true (!0)
 
 struct chip8_cpu {
     u8  memory[0x1000];
@@ -63,7 +63,7 @@ debug(struct chip8_cpu *cpu) {
     int j = 0;
     char sep = '1';
     for (int j = 0; j < 16; j += 1) {
-        sep = (j-7 % 8) == 0 ? '\n' : ' ';
+        sep = ((j - 7) % 8) == 0 ? '\n' : ' ';
         printf("v%x=$%02x%c",  j, cpu->v[j], sep);
     }
     printf("\nsp=$%03x program_counter=$%03x i=$%03x\n",
@@ -119,7 +119,7 @@ cycle(struct chip8_cpu *cpu) {
     case 0x0000:
         switch (op & 0x0fff) {
         case 0x00e0:
-            memset(cpu->screen_buffer, sizeof(cpu->screen_buffer), 0);
+            memset(cpu->screen_buffer, 0, sizeof(cpu->screen_buffer));
             break;
 
         case 0x00ee:
@@ -255,7 +255,7 @@ dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
         break;
 
     case 0x5000:
-        die("se vx, vy");
+        snprintf(string, string_capacity, "TODO se vx, vy %04x", op);
         break;
 
     case 0x6000:
@@ -331,7 +331,7 @@ load(struct chip8_cpu *cpu, const char *fullname)
     if (!fp)
         die("failed to open file");
 
-    fread(cpu->memory + 0x200, 0x500, 1, fp);
+    fread(cpu->memory + 0x200, 1, 0xE00, fp);
 
     printf("%s\n", fullname);
     /*die("load2");*/
