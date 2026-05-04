@@ -157,7 +157,7 @@ main()
     printf("PrefPath: %s\n", SDL_GetPrefPath("org", "app"));
     printf("Platform: %s\n", SDL_GetPlatform());
 
-    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
     window = SDL_CreateWindow(
             "CHIP-8",
