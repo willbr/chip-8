@@ -38,9 +38,10 @@ call run_demo.cmd
 exit /b 0
 
 :hydrate-roms
-echo Hydrating ROMs from dmatlack/chip8 and loktar00/chip8...
+echo Hydrating ROMs from dmatlack/chip8, loktar00/chip8, and corax89/chip8-test-rom...
 if not exist roms\dmatlack mkdir roms\dmatlack
 if not exist roms\loktar00 mkdir roms\loktar00
+if not exist roms\corax89 mkdir roms\corax89
 
 git clone --depth 1 https://github.com/dmatlack/chip8.git %TEMP%\chip8-dmatlack >nul 2>&1
 xcopy /Y /S %TEMP%\chip8-dmatlack\roms\games\*.ch8 roms\dmatlack\ >nul 2>&1
@@ -49,6 +50,10 @@ rmdir /S /Q %TEMP%\chip8-dmatlack >nul 2>&1
 git clone --depth 1 https://github.com/loktar00/chip8.git %TEMP%\chip8-loktar00 >nul 2>&1
 xcopy /Y /S %TEMP%\chip8-loktar00\roms\*.ch8 roms\loktar00\ >nul 2>&1
 rmdir /S /Q %TEMP%\chip8-loktar00 >nul 2>&1
+
+git clone --depth 1 https://github.com/corax89/chip8-test-rom.git %TEMP%\chip8-corax89 >nul 2>&1
+xcopy /Y /S %TEMP%\chip8-corax89\*.ch8 roms\corax89\ >nul 2>&1
+rmdir /S /Q %TEMP%\chip8-corax89 >nul 2>&1
 
 echo Done.
 exit /b 0

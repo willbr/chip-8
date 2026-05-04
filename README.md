@@ -39,16 +39,16 @@ make mcp-server   # MCP server (stdio transport)
 * [x] SDL
 * [x] `SDL_ttf`
 * [x] Basic opcode execution (`0x1NNN`, `0x6XNN`, `0x7XNN`, `0xANNN`, `0xDNNN`, `0x00E0`)
-* [ ] Subroutines (`0x2NNN`, `0x00EE`)
-* [ ] Skip instructions (`0x3XNN`, `0x4XNN`, `0x5XY0`, `0x9XY0`)
-* [ ] Arithmetic / logic (`0x8XY*`)
-* [ ] Random (`0xCXNN`)
-* [ ] Input (`0xEXXX`, `0xFX0A`)
-* [ ] Delay timer
-* [ ] Sound timer
-* [ ] Font data loaded into memory
-* [ ] Hex keyboard handling
-* [ ] Test rom https://github.com/corax89/chip8-test-rom
+* [x] Subroutines (`0x2NNN`, `0x00EE`)
+* [x] Skip instructions (`0x3XNN`, `0x4XNN`, `0x5XY0`, `0x9XY0`)
+* [x] Arithmetic / logic (`0x8XY*`)
+* [x] Random (`0xCXNN`)
+* [x] Input (`0xEXXX`, `0xFX0A`)
+* [x] Delay timer
+* [x] Sound timer
+* [x] Font data loaded into memory
+* [x] Hex keyboard handling
+* [x] Test rom https://github.com/corax89/chip8-test-rom
 * [x] MCP server
 * [ ] Move emulation to a separate library for hot reloading
 * [ ] Hot reload ROM via IPC or TCP

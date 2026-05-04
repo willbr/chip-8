@@ -27,6 +27,39 @@ static int roms_window_open = 0;
 static int roms_window_just_opened = 0;
 static char rom_filter[64] = "";
 
+SDL_AudioDeviceID audio_device = 0;
+
+static void audio_callback(void *userdata, Uint8 *stream, int len) {
+    (void)userdata;
+    static int phase = 0;
+    for (int i = 0; i < len; i++) {
+        stream[i] = (phase < 128) ? 240 : 16;
+        phase = (phase + 1) % 256;
+    }
+}
+
+static int map_key(SDL_Keycode sym) {
+    switch (sym) {
+        case SDLK_1: return 0x1;
+        case SDLK_2: return 0x2;
+        case SDLK_3: return 0x3;
+        case SDLK_4: return 0xC;
+        case SDLK_q: return 0x4;
+        case SDLK_w: return 0x5;
+        case SDLK_e: return 0x6;
+        case SDLK_r: return 0xD;
+        case SDLK_a: return 0x7;
+        case SDLK_s: return 0x8;
+        case SDLK_d: return 0x9;
+        case SDLK_f: return 0xE;
+        case SDLK_z: return 0xA;
+        case SDLK_x: return 0x0;
+        case SDLK_c: return 0xB;
+        case SDLK_v: return 0xF;
+        default: return -1;
+    }
+}
+
 static int str_contains_ci(const char *haystack, const char *needle) {
     if (!needle[0]) return 1;
     char h[256], n[64];
@@ -54,15 +87,34 @@ static void scan_dir(const char *dir) {
     char pattern[256];
     WIN32_FIND_DATAA fd;
     HANDLE h;
+
+    /* find .ch8 files */
     snprintf(pattern, sizeof(pattern), "%s\\*.ch8", dir);
+    h = FindFirstFileA(pattern, &fd);
+    if (h != INVALID_HANDLE_VALUE) {
+        do {
+            if (rom_count >= MAX_ROMS) break;
+            snprintf(rom_files[rom_count], 256, "%s\\%s", dir, fd.cFileName);
+            strncpy(rom_names[rom_count], fd.cFileName, 63);
+            rom_names[rom_count][63] = '\0';
+            rom_count++;
+        } while (FindNextFileA(h, &fd));
+        FindClose(h);
+    }
+
+    /* recurse into subdirectories */
+    snprintf(pattern, sizeof(pattern), "%s\\*", dir);
     h = FindFirstFileA(pattern, &fd);
     if (h == INVALID_HANDLE_VALUE) return;
     do {
-        if (rom_count >= MAX_ROMS) break;
-        snprintf(rom_files[rom_count], 256, "%s\\%s", dir, fd.cFileName);
-        strncpy(rom_names[rom_count], fd.cFileName, 63);
-        rom_names[rom_count][63] = '\0';
-        rom_count++;
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            if (strcmp(fd.cFileName, ".") == 0) continue;
+            if (strcmp(fd.cFileName, "..") == 0) continue;
+            if (rom_count >= MAX_ROMS) break;
+            char subdir[256];
+            snprintf(subdir, sizeof(subdir), "%s\\%s", dir, fd.cFileName);
+            scan_dir(subdir);
+        }
     } while (FindNextFileA(h, &fd));
     FindClose(h);
 }
@@ -70,8 +122,6 @@ static void scan_dir(const char *dir) {
 static void scan_roms(void) {
     rom_count = 0;
     scan_dir("roms");
-    scan_dir("roms\\dmatlack");
-    scan_dir("roms\\loktar00");
 }
 
 static int text_width(mu_Font font, const char *text, int len) {
@@ -148,12 +198,34 @@ main()
         return 1;
     }
 
+    {
+        SDL_AudioSpec want;
+        SDL_zero(want);
+        want.freq = 44100;
+        want.format = AUDIO_U8;
+        want.channels = 1;
+        want.samples = 512;
+        want.callback = audio_callback;
+        audio_device = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
+        if (audio_device == 0) {
+            fprintf(stderr, "open audio device failed: %s\n", SDL_GetError());
+        }
+    }
+
     while (gui_running) {
         SDL_Event e;
 
         if (cpu_running) {
             for (int i = 0; i < cycles_per_frame; i++)
                 cycle(cpu);
+        }
+
+        if (cpu->delay_timer > 0) cpu->delay_timer--;
+        if (cpu->sound_timer > 0) {
+            cpu->sound_timer--;
+            if (audio_device) SDL_PauseAudioDevice(audio_device, 0);
+        } else {
+            if (audio_device) SDL_PauseAudioDevice(audio_device, 1);
         }
 
         while (SDL_PollEvent(&e)) {
@@ -192,6 +264,14 @@ main()
                 case SDL_KEYDOWN: {
                     int c = key_map[e.key.keysym.sym & 0xff];
                     if (c) { mu_input_keydown(ctx, c); }
+                    int chip8_key = map_key(e.key.keysym.sym);
+                    if (chip8_key >= 0) {
+                        cpu->keys[chip8_key] = 1;
+                        if (cpu->waiting_for_key) {
+                            cpu->v[cpu->key_register] = chip8_key;
+                            cpu->waiting_for_key = 0;
+                        }
+                    }
                     switch (e.key.keysym.sym) {
                         case SDLK_ESCAPE:
                             cpu_running = SDL_FALSE;
@@ -212,6 +292,10 @@ main()
                 case SDL_KEYUP: {
                     int c = key_map[e.key.keysym.sym & 0xff];
                     if (c) { mu_input_keyup(ctx, c); }
+                    int chip8_key = map_key(e.key.keysym.sym);
+                    if (chip8_key >= 0) {
+                        cpu->keys[chip8_key] = 0;
+                    }
                     break;
                 }
             }
@@ -333,8 +417,10 @@ regs_window(mu_Context *ctx) {
             cpu->v[8], cpu->v[9], cpu->v[10], cpu->v[11],
             cpu->v[12], cpu->v[13], cpu->v[14], cpu->v[15]);
         mu_label(ctx, buf);
-        snprintf(buf, sizeof(buf), "sp=$%03x pc=$%03x i=$%03x",
-            cpu->stack_pointer, cpu->program_counter, cpu->i);
+        snprintf(buf, sizeof(buf), "sp=$%03x pc=$%03x i=$%03x dt=$%02x st=$%02x%s",
+            cpu->stack_pointer, cpu->program_counter, cpu->i,
+            cpu->delay_timer, cpu->sound_timer,
+            cpu->waiting_for_key ? " WAIT" : "");
         mu_label(ctx, buf);
         mu_end_window(ctx);
     }

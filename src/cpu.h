@@ -28,10 +28,17 @@ struct chip8_cpu {
     u8  delay_timer;
     u8  sound_timer;
 
+    u8  keys[16];
+    u8  waiting_for_key;
+    u8  key_register;
+
     char screen_buffer[64 * 32];
 };
 
 void dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity);
+
+#include <time.h>
+static int rng_seeded = 0;
 
 u8 font_data[] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -56,6 +63,11 @@ void
 init(struct chip8_cpu *cpu) {
     memset(cpu, 0, sizeof(struct chip8_cpu));
     cpu->program_counter = 0x200;
+    memcpy(cpu->memory + 0x50, font_data, sizeof(font_data));
+    if (!rng_seeded) {
+        srand((unsigned int)time(NULL));
+        rng_seeded = 1;
+    }
 }
 
 void
@@ -79,24 +91,26 @@ void
 draw(struct chip8_cpu *cpu, u8 vx, u8 vy, u8 n) {
     u8 c = 0;
     u16 nnn = cpu->i;
-    u8 x = cpu->v[vx];
-    u8 y = cpu->v[vy];
-    u16 offset = 0;
+    u8 x = cpu->v[vx] & 63;
+    u8 y = cpu->v[vy] & 31;
+    u8 pixel;
+    cpu->v[0xf] = 0;
 
-    offset = (y * 64) + x;
-    //printf("draw x=$%02x, y=$%02x, n=$%x, i=$%03x\n", x, y, n, cpu->i);
-    for (int j = 0; j < n; j += 1) {
-        c = cpu->memory[nnn];
-        if (c & 0x80) cpu->screen_buffer[offset + 0] = '#';
-        if (c & 0x40) cpu->screen_buffer[offset + 1] = '#';
-        if (c & 0x20) cpu->screen_buffer[offset + 2] = '#';
-        if (c & 0x10) cpu->screen_buffer[offset + 3] = '#';
-        if (c & 0x08) cpu->screen_buffer[offset + 4] = '#';
-        if (c & 0x04) cpu->screen_buffer[offset + 5] = '#';
-        if (c & 0x02) cpu->screen_buffer[offset + 6] = '#';
-        if (c & 0x01) cpu->screen_buffer[offset + 7] = '#';
-        nnn += 1;
-        offset += 64;
+    for (int row = 0; row < n; row++) {
+        c = cpu->memory[nnn + row];
+        for (int col = 0; col < 8; col++) {
+            if ((c & (0x80 >> col)) != 0) {
+                int px = (x + col) & 63;
+                int py = (y + row) & 31;
+                int idx = py * 64 + px;
+                if (cpu->screen_buffer[idx]) {
+                    cpu->screen_buffer[idx] = 0;
+                    cpu->v[0xf] = 1;
+                } else {
+                    cpu->screen_buffer[idx] = '#';
+                }
+            }
+        }
     }
 }
 
@@ -107,13 +121,14 @@ cycle(struct chip8_cpu *cpu) {
     u16 nnn;
     char dis_buffer[255] = {0};
 
+    if (cpu->waiting_for_key) return;
+
     op = peek16(cpu, cpu->program_counter);
 
     dis(cpu, cpu->program_counter, dis_buffer, sizeof(dis_buffer));
     //printf("op: 0x%04x\n%s\n", op, dis_buffer);
 
     cpu->program_counter += 2;
-
 
     switch (op & 0xf000) {
     case 0x0000:
@@ -123,7 +138,8 @@ cycle(struct chip8_cpu *cpu) {
             break;
 
         case 0x00ee:
-            die("return");
+            cpu->stack_pointer--;
+            cpu->program_counter = cpu->stack[cpu->stack_pointer];
             break;
 
         default:
@@ -138,19 +154,28 @@ cycle(struct chip8_cpu *cpu) {
         break;
 
     case 0x2000:
-        die("call nnn");
+        nnn = op & 0xfff;
+        cpu->stack[cpu->stack_pointer] = cpu->program_counter;
+        cpu->stack_pointer++;
+        cpu->program_counter = nnn;
         break;
 
     case 0x3000:
-        die("se vx, byte");
+        vx = (op & 0x0f00) >> 8;
+        nn = op & 0x00ff;
+        if (cpu->v[vx] == nn) cpu->program_counter += 2;
         break;
 
     case 0x4000:
-        die("sne vx, byte ");
+        vx = (op & 0x0f00) >> 8;
+        nn = op & 0x00ff;
+        if (cpu->v[vx] != nn) cpu->program_counter += 2;
         break;
 
     case 0x5000:
-        die("se vx, vy");
+        vx = (op & 0x0f00) >> 8;
+        vy = (op & 0x00f0) >> 4;
+        if (cpu->v[vx] == cpu->v[vy]) cpu->program_counter += 2;
         break;
 
     case 0x6000:
@@ -166,11 +191,45 @@ cycle(struct chip8_cpu *cpu) {
         break;
 
     case 0x8000:
-        die("multiple ops");
+        vx = (op & 0x0f00) >> 8;
+        vy = (op & 0x00f0) >> 4;
+        switch (op & 0x000f) {
+        case 0x0: cpu->v[vx] = cpu->v[vy]; break;
+        case 0x1: cpu->v[vx] |= cpu->v[vy]; break;
+        case 0x2: cpu->v[vx] &= cpu->v[vy]; break;
+        case 0x3: cpu->v[vx] ^= cpu->v[vy]; break;
+        case 0x4: {
+            u16 sum = cpu->v[vx] + cpu->v[vy];
+            cpu->v[0xf] = sum > 0xff ? 1 : 0;
+            cpu->v[vx] = sum & 0xff;
+            break;
+        }
+        case 0x5:
+            cpu->v[0xf] = cpu->v[vx] >= cpu->v[vy] ? 1 : 0;
+            cpu->v[vx] -= cpu->v[vy];
+            break;
+        case 0x6:
+            cpu->v[0xf] = cpu->v[vx] & 0x1;
+            cpu->v[vx] >>= 1;
+            break;
+        case 0x7:
+            cpu->v[0xf] = cpu->v[vy] >= cpu->v[vx] ? 1 : 0;
+            cpu->v[vx] = cpu->v[vy] - cpu->v[vx];
+            break;
+        case 0xe:
+            cpu->v[0xf] = (cpu->v[vx] & 0x80) >> 7;
+            cpu->v[vx] <<= 1;
+            break;
+        default:
+            die("unknown 8xy op");
+            break;
+        }
         break;
 
     case 0x9000:
-        die("sne vx, vy");
+        vx = (op & 0x0f00) >> 8;
+        vy = (op & 0x00f0) >> 4;
+        if (cpu->v[vx] != cpu->v[vy]) cpu->program_counter += 2;
         break;
 
     case 0xa000:
@@ -179,11 +238,14 @@ cycle(struct chip8_cpu *cpu) {
         break;
 
     case 0xb000:
-        die("jp v0, addr");
+        nnn = op & 0xfff;
+        cpu->program_counter = nnn + cpu->v[0];
         break;
 
     case 0xc000:
-        die("rnd vx, byte");
+        vx = (op & 0x0f00) >> 8;
+        nn = op & 0x00ff;
+        cpu->v[vx] = (rand() % 256) & nn;
         break;
 
     case 0xd000:
@@ -194,11 +256,61 @@ cycle(struct chip8_cpu *cpu) {
         break;
 
     case 0xe000:
-        die("multiple ops");
+        vx = (op & 0x0f00) >> 8;
+        switch (op & 0x00ff) {
+        case 0x9e:
+            if (cpu->keys[cpu->v[vx] & 0x0f]) cpu->program_counter += 2;
+            break;
+        case 0xa1:
+            if (!cpu->keys[cpu->v[vx] & 0x0f]) cpu->program_counter += 2;
+            break;
+        default:
+            die("unknown e op");
+            break;
+        }
         break;
 
     case 0xf000:
-        die("multiple ops");
+        vx = (op & 0x0f00) >> 8;
+        switch (op & 0x00ff) {
+        case 0x07:
+            cpu->v[vx] = cpu->delay_timer;
+            break;
+        case 0x0a:
+            cpu->waiting_for_key = 1;
+            cpu->key_register = vx;
+            break;
+        case 0x15:
+            cpu->delay_timer = cpu->v[vx];
+            break;
+        case 0x18:
+            cpu->sound_timer = cpu->v[vx];
+            break;
+        case 0x1e:
+            cpu->i += cpu->v[vx];
+            break;
+        case 0x29:
+            cpu->i = 0x50 + (cpu->v[vx] & 0x0f) * 5;
+            break;
+        case 0x33:
+            cpu->memory[cpu->i]     = cpu->v[vx] / 100;
+            cpu->memory[cpu->i + 1] = (cpu->v[vx] / 10) % 10;
+            cpu->memory[cpu->i + 2] = cpu->v[vx] % 10;
+            break;
+        case 0x55:
+            for (int j = 0; j <= vx; j++) {
+                cpu->memory[cpu->i + j] = cpu->v[j];
+            }
+            break;
+        case 0x65:
+            for (int j = 0; j <= vx; j++) {
+                cpu->v[j] = cpu->memory[cpu->i + j];
+            }
+            break;
+        default:
+            die("unknown f op");
+            break;
+        }
         break;
 
     default:
@@ -301,11 +413,34 @@ dis(struct chip8_cpu *cpu, u16 pc, char *string, size_t string_capacity) {
         break;
 
     case 0xe000:
-        snprintf(string, string_capacity, "TODO multiple ops %04x", op);
+        vx = (op & 0x0f00) >> 8;
+        switch (op & 0x00ff) {
+        case 0x9e:
+            snprintf(string, string_capacity, "skp v%x", vx);
+            break;
+        case 0xa1:
+            snprintf(string, string_capacity, "sknp v%x", vx);
+            break;
+        default:
+            snprintf(string, string_capacity, "TODO multiple ops %04x", op);
+            break;
+        }
         break;
 
     case 0xf000:
-        snprintf(string, string_capacity, "TODO multiple ops %04x", op);
+        vx = (op & 0x0f00) >> 8;
+        switch (op & 0x00ff) {
+        case 0x07: snprintf(string, string_capacity, "ld v%x, dt", vx); break;
+        case 0x0a: snprintf(string, string_capacity, "ld v%x, k", vx); break;
+        case 0x15: snprintf(string, string_capacity, "ld dt, v%x", vx); break;
+        case 0x18: snprintf(string, string_capacity, "ld st, v%x", vx); break;
+        case 0x1e: snprintf(string, string_capacity, "add i, v%x", vx); break;
+        case 0x29: snprintf(string, string_capacity, "ld f, v%x", vx); break;
+        case 0x33: snprintf(string, string_capacity, "ld b, v%x", vx); break;
+        case 0x55: snprintf(string, string_capacity, "ld [i], v%x", vx); break;
+        case 0x65: snprintf(string, string_capacity, "ld v%x, [i]", vx); break;
+        default: snprintf(string, string_capacity, "TODO multiple ops %04x", op); break;
+        }
         break;
 
     default:

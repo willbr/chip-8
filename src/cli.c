@@ -20,14 +20,14 @@ main(int argc, char **argv)
 {
     cpu = malloc(sizeof(struct chip8_cpu));
     init(cpu);
-    load(cpu, "./roms/IBM Logo.ch8");
+    if (argc > 1) {
+        load(cpu, argv[1]);
+    } else {
+        load(cpu, "./roms/IBM Logo.ch8");
+    }
 
-    for (int i = 0; i < 21; i += 1) {
-        //clear_screen();
-        debug(cpu);
+    for (int i = 0; i < 10000; i += 1) {
         cycle(cpu);
-        puts("");
-        //puts(screen);
     }
 
     int j = 0;
